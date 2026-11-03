@@ -57,9 +57,11 @@ active_session = {
     "full_name": "Marcus Vance",
     "role": "procurement_buyer",
     "portal": "admin", # "admin" or "buyer"
-    "supplier_id": 1,
+    "supplier_id": None,
     "avatar_initials": "MV"
 }
+
+ALLOWED_SWITCH_ROLES = frozenset({"procurement_buyer", "supplier_user"})
 
 # ----------------- AUTH & SESSION -----------------
 
@@ -72,11 +74,8 @@ def get_current_user():
             {"id": "buyer", "title": "Buyer Portal", "context": "Supplier Workspace"}
         ],
         "available_roles": [
-            {"role": "procurement_buyer", "portal": "admin", "name": "Marcus Vance (Buyer)"},
+            {"role": "procurement_buyer", "portal": "admin", "name": "Marcus Vance (Procurement Buyer)"},
             {"role": "supplier_user", "portal": "buyer", "name": "Elena Rostova (Precision Components)"},
-            {"role": "requester", "portal": "admin", "name": "Sarah Jenkins (Requester)"},
-            {"role": "finance_approver", "portal": "admin", "name": "David Chen (Finance Approver)"},
-            {"role": "tenant_admin", "portal": "admin", "name": "System Administrator"}
         ]
     }
 
@@ -87,6 +86,9 @@ class RoleSwitchRequest(BaseModel):
 
 @app.post("/api/v1/auth/switch-role")
 def switch_role(req: RoleSwitchRequest):
+    if req.role not in ALLOWED_SWITCH_ROLES:
+        raise HTTPException(status_code=400, detail="Only procurement buyer and supplier user roles are enabled in this demo.")
+
     active_session["role"] = req.role
     active_session["portal"] = req.portal
     if req.role == "supplier_user":
@@ -94,22 +96,13 @@ def switch_role(req: RoleSwitchRequest):
         active_session["email"] = "elena.rostova@precisioncomponents.com"
         active_session["avatar_initials"] = "ER"
         active_session["supplier_id"] = req.supplier_id or 1
-    elif req.role == "requester":
-        active_session["full_name"] = "Sarah Jenkins"
-        active_session["email"] = "sarah.jenkins@sellmygoods.com"
-        active_session["avatar_initials"] = "SJ"
-    elif req.role == "finance_approver":
-        active_session["full_name"] = "David Chen"
-        active_session["email"] = "david.chen@sellmygoods.com"
-        active_session["avatar_initials"] = "DC"
-    elif req.role == "tenant_admin":
-        active_session["full_name"] = "System Administrator"
-        active_session["email"] = "admin@sellmygoods.com"
-        active_session["avatar_initials"] = "SA"
+        active_session["user_id"] = 2
     else:
         active_session["full_name"] = "Marcus Vance"
         active_session["email"] = "marcus.vance@sellmygoods.com"
         active_session["avatar_initials"] = "MV"
+        active_session["supplier_id"] = None
+        active_session["user_id"] = 1
     return {"status": "success", "user": active_session}
 
 
@@ -844,10 +837,30 @@ def approve_invoice(id: int, db: Session = Depends(get_db)):
 
 # ----------------- AUCTIONS (E12, Image 14) -----------------
 
+def _serialize_auction(a: Auction) -> dict:
+    return {
+        "id": a.id,
+        "auction_number": a.auction_number,
+        "title": a.title,
+        "auction_type": a.auction_type,
+        "status": a.status,
+        "pr_number": a.pr_number,
+        "current_approver": a.current_approver,
+        "start_time": a.start_time.isoformat() if a.start_time else None,
+        "end_time": a.end_time.isoformat() if a.end_time else None,
+        "reserve_price": float(a.reserve_price or 0),
+        "min_decrement": float(a.min_decrement or 0),
+        "current_best_bid": float(a.current_best_bid or 0),
+        "best_bidder_id": a.best_bidder_id,
+        "total_bids_placed": int(a.total_bids_placed or 0),
+        "currency": "USD",
+    }
+
+
 @app.get("/api/v1/auctions")
 def get_auctions(db: Session = Depends(get_db)):
     aucs = db.query(Auction).order_by(Auction.id.desc()).all()
-    return aucs
+    return [_serialize_auction(a) for a in aucs]
 
 class PlaceAuctionBidRequest(BaseModel):
     bid_amount: float
@@ -867,11 +880,19 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
             raise HTTPException(status_code=400, detail=f"Bid must be higher than current best: ${auc.current_best_bid:,.2f}")
 
     auc.current_best_bid = req.bid_amount
-    auc.best_bidder_id = active_session.get("supplier_id", 1)
+    auc.best_bidder_id = active_session.get("supplier_id") or 1
     auc.total_bids_placed += 1
+    if auc.status == "Scheduled":
+        auc.status = "Live"
     db.commit()
-    
-    return {"status": "success", "message": f"Bid of ${req.bid_amount:,.2f} accepted as leading bid!", "current_best": auc.current_best_bid}
+    db.refresh(auc)
+
+    return {
+        "status": "success",
+        "message": f"Bid of ${req.bid_amount:,.2f} accepted as leading bid!",
+        "current_best": auc.current_best_bid,
+        "auction": _serialize_auction(auc),
+    }
 
 # ----------------- CONTRACTS & CLAUSES (E15, Image 29) -----------------
 

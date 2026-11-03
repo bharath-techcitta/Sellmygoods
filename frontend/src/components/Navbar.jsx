@@ -6,9 +6,6 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
   const roles = [
     { role: 'procurement_buyer', portal: 'admin', label: 'Marcus Vance (Procurement Buyer)' },
     { role: 'supplier_user', portal: 'buyer', label: 'Elena Rostova (Precision Components - Supplier)' },
-    { role: 'requester', portal: 'admin', label: 'Sarah Jenkins (Department Requester)' },
-    { role: 'finance_approver', portal: 'admin', label: 'David Chen (Finance Controller)' },
-    { role: 'tenant_admin', portal: 'admin', label: 'System Administrator (Tenant Admin)' }
   ];
 
   return (

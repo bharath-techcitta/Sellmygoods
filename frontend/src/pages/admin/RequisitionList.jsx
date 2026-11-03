@@ -13,6 +13,8 @@ const defaultPRs = [
     total_amount: 32000.0,
     status: 'Approved',
     current_approver: 'Finance Director',
+    buyer_name: 'Marcus Vance',
+    currency: 'USD',
     is_budgeted: true
   },
   {
@@ -25,6 +27,8 @@ const defaultPRs = [
     total_amount: 15500.0,
     status: 'Pending Approval',
     current_approver: 'David Chen',
+    buyer_name: 'Marcus Vance',
+    currency: 'USD',
     is_budgeted: true
   },
   {
@@ -37,6 +41,8 @@ const defaultPRs = [
     total_amount: 18500.0,
     status: 'Draft',
     current_approver: 'Marcus Vance',
+    buyer_name: 'Marcus Vance',
+    currency: 'USD',
     is_budgeted: true
   }
 ];
@@ -175,7 +181,7 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
             }}
           />
           <div style={{ fontSize: '12.5px', color: '#73767b' }}>
-            Showing 1–{requisitions.length} of {requisitions.length} records
+            Showing 1–{displayedPRs.length} of {displayedPRs.length} records
           </div>
         </div>
 

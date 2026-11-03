@@ -1,8 +1,11 @@
-const BASE_URL = import.meta.env?.VITE_API_URL 
-  || (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL)
-  || (typeof window !== 'undefined' && (window.location.origin.includes('localhost:3000') || window.location.origin.includes('localhost:5173'))
-    ? 'http://localhost:8000/api/v1' 
-    : '/api/v1');
+const isLocalDev =
+  typeof window !== 'undefined' &&
+  /localhost:3000|localhost:5173|127\.0\.0\.1:3000|127\.0\.0\.1:5173/.test(window.location.origin);
+
+const BASE_URL =
+  import.meta.env?.VITE_API_URL ||
+  (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL) ||
+  (isLocalDev ? 'http://localhost:8000/api/v1' : '/api/v1');
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;

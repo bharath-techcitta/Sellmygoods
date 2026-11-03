@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ./dev-win.ps1",
     "build": "vite build",
     "preview": "vite preview"
   },

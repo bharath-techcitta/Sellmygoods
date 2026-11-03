@@ -48,7 +48,7 @@ export default function AuctionDirectory() {
       const res = await api.getAuctions();
       if (res && res.length) {
         setAuctions(res);
-        setSelectedAuction(res[0]);
+        setSelectedAuction((prev) => res.find((a) => a.id === prev?.id) || res[0]);
       }
     } catch (e) {
       console.error(e);
@@ -58,15 +58,25 @@ export default function AuctionDirectory() {
   const handlePlaceBid = async (e) => {
     e.preventDefault();
     if (!bidInput || !selectedAuction) return;
+    const amount = parseFloat(bidInput);
+    if (Number.isNaN(amount)) {
+      alert('Enter a valid bid amount.');
+      return;
+    }
     try {
-      const res = await api.placeAuctionBid(selectedAuction.id, parseFloat(bidInput));
-      setBidSuccess(res.message);
+      const res = await api.placeAuctionBid(selectedAuction.id, amount);
+      setBidSuccess(res.message || `Bid of $${amount.toLocaleString()} accepted.`);
       setBidInput('');
-      loadAuctions();
+      await loadAuctions();
     } catch (err) {
       alert(err.message || 'Bid submission rejected');
     }
   };
+
+  const bidHint =
+    selectedAuction?.auction_type === 'Reverse Sourcing'
+      ? `Enter less than $${Number(selectedAuction.current_best_bid).toLocaleString()} (e.g. ${Math.max(0, selectedAuction.current_best_bid - selectedAuction.min_decrement).toLocaleString()})`
+      : `Enter more than $${Number(selectedAuction?.current_best_bid || 0).toLocaleString()} (e.g. ${(selectedAuction.current_best_bid + selectedAuction.min_decrement).toLocaleString()})`;
 
   return (
     <div>
@@ -145,8 +155,8 @@ export default function AuctionDirectory() {
                   Lot: {selectedAuction.auction_number} • {selectedAuction.auction_type}
                 </span>
               </div>
-              <span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}>
-                ⚡ LIVE STREAM ACTIVE
+              <span style={{ backgroundColor: selectedAuction.status === 'Live' ? '#f0e5ff' : '#fff0d8', color: selectedAuction.status === 'Live' ? '#432177' : '#b65c16', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}>
+                {selectedAuction.status === 'Live' ? '⚡ LIVE STREAM ACTIVE' : `⏱ ${selectedAuction.status}`}
               </span>
             </div>
 
@@ -204,7 +214,7 @@ export default function AuctionDirectory() {
                 </button>
               </div>
               <p style={{ margin: 0, fontSize: '11.5px', color: '#73767b' }}>
-                Bids are atomic and cryptographically time-stamped. Anti-sniping auto-extends close by 3 minutes on late bids.
+                {bidHint}. Bids are time-stamped; anti-sniping extends close by 3 minutes on late bids.
               </p>
             </form>
           </div>

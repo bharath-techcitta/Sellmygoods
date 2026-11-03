@@ -171,7 +171,7 @@ export default function SupplierDirectory({ navigateTo, onSelectSupplier }) {
             }}
           />
           <div style={{ fontSize: '12.5px', color: '#73767b' }}>
-            Showing 1–{suppliers.length} of {suppliers.length} records
+            Showing 1–{displayedSuppliers.length} of {displayedSuppliers.length} records
           </div>
         </div>
 
@@ -193,11 +193,6 @@ export default function SupplierDirectory({ navigateTo, onSelectSupplier }) {
             </thead>
             <tbody>
               {(() => {
-                const displayedSuppliers = suppliers.filter((s) => {
-                  if (activeFilter === 'Total') return true;
-                  if (activeFilter === 'Pending + Info') return s.status === 'Pending Approval' || s.status === 'More Info Required';
-                  return s.status === activeFilter;
-                });
                 if (displayedSuppliers.length === 0) {
                   return (
                     <tr>

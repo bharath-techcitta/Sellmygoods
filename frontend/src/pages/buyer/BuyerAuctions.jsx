@@ -20,6 +20,7 @@ export default function BuyerAuctions() {
   const [auctions, setAuctions] = useState(defaultBuyerAuctions);
   const [bidAmount, setBidAmount] = useState('');
   const [activeAuction, setActiveAuction] = useState(defaultBuyerAuctions[0]);
+  const [bidMessage, setBidMessage] = useState('');
 
   useEffect(() => {
     load();
@@ -30,10 +31,23 @@ export default function BuyerAuctions() {
       const res = await api.getAuctions();
       if (res && res.length) {
         setAuctions(res);
-        setActiveAuction(res[0]);
+        setActiveAuction((prev) => res.find((a) => a.id === prev?.id) || res[0]);
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handlePlaceBid = async (e) => {
+    e.preventDefault();
+    if (!bidAmount || !activeAuction) return;
+    try {
+      const res = await api.placeAuctionBid(activeAuction.id, parseFloat(bidAmount));
+      setBidMessage(res.message || 'Bid submitted successfully.');
+      setBidAmount('');
+      await load();
+    } catch (err) {
+      alert(err.message || 'Bid submission rejected');
     }
   };
 
@@ -49,6 +63,12 @@ export default function BuyerAuctions() {
           </p>
         </div>
       </div>
+
+      {bidMessage && (
+        <div style={{ padding: '10px 16px', backgroundColor: '#d1fae8', color: '#0f9d78', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', fontWeight: '600' }}>
+          ✓ {bidMessage}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         <div className="card-enterprise" style={{ padding: '20px' }}>
