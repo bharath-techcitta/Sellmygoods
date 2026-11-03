@@ -1,0 +1,2426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SellMyGoods — Enterprise Procurement & Supplier Collaboration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- React & Babel Standalone for immediate browser execution -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --brand-sidebar: #2e1857;
+      --brand-primary: #432177;
+      --brand-hover: #512d88;
+      --brand-selected: #482a73;
+      --page-bg: #f7f7f8;
+      --surface: #ffffff;
+      --text: #242424;
+      --text-muted: #73767b;
+      --border: #e6e6e9;
+      --success: #0f9d78;
+      --success-bg: #d1fae8;
+      --warning: #b65c16;
+      --warning-bg: #fff0d8;
+      --danger: #c32e3b;
+      --danger-bg: #fce4e7;
+      --info: #3676ce;
+      --info-bg: #deebff;
+      --purple-bg: #f0e5ff;
+      --radius-card: 13px;
+      --radius-control: 6px;
+      --sidebar-width: 242px;
+      --header-height: 58px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--page-bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-mono-numbers {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    .card-enterprise {
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-card);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    const BASE_URL = window.__ENV__?.VITE_API_URL 
+      || localStorage.getItem('API_URL') 
+      || '/api/v1';
+    async function apiRequest(endpoint, options = {}) {
+      try {
+        const res = await fetch(`${BASE_URL}${endpoint}`, {
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+          ...options
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'API request failed' }));
+          throw new Error(err.detail || 'Request error');
+        }
+        return res.json();
+      } catch (e) {
+        console.warn(`API call ${endpoint} error:`, e.message);
+        throw e;
+      }
+    }
+
+    // --- REUSABLE COMPONENTS ---
+    function StatusBadge({ status }) {
+      let bg = '#f3f4f6', text = '#4b5563', border = '#e5e7eb';
+      if (['Active', 'Complete', 'Approved', 'Verified', 'Awarded', 'Fully Received', 'Fully Invoiced', 'Synced', 'Operational'].includes(status)) {
+        bg = '#d1fae8'; text = '#0f9d78'; border = '#a7f3d0';
+      } else if (['Pending Approval', 'Under Evaluation', 'Technical Review', 'Commercial Review', 'Scheduled', 'Pending Receipt', 'Awaiting Participation', 'In Progress'].includes(status)) {
+        bg = '#fff0d8'; text = '#b65c16'; border = '#fde68a';
+      } else if (['Submitted', 'Issued', 'Published', 'Live'].includes(status)) {
+        bg = '#f0e5ff'; text = '#432177'; border = '#d8b4fe';
+      } else if (['More Info Required', 'Changes in Draft', 'Partially Received', 'Draft'].includes(status)) {
+        bg = '#deebff'; text = '#3676ce'; border = '#bfdbfe';
+      } else if (['Rejected', 'Cancelled', 'High', 'Error'].includes(status)) {
+        bg = '#fce4e7'; text = '#c32e3b'; border = '#fecdd3';
+      }
+      return (
+        <span style={{ backgroundColor: bg, color: text, border: `1px solid ${border}`, fontSize: '12px', fontWeight: '500', padding: '2px 8px', borderRadius: '9999px', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: text }} />
+          {status}
+        </span>
+      );
+    }
+
+    function MetricCard({ label, count, icon, isSelected, onClick, color = '#432177' }) {
+      return (
+        <div
+          onClick={onClick}
+          style={{
+            backgroundColor: isSelected ? '#f5f0ff' : '#ffffff',
+            border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+            borderRadius: '13px',
+            padding: '16px',
+            cursor: onClick ? 'pointer' : 'default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <div>
+            <div style={{ fontSize: '13px', color: '#73767b', fontWeight: '500', marginBottom: '4px' }}>{label}</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#242424', fontFamily: 'JetBrains Mono, monospace' }}>{count}</div>
+          </div>
+          {icon && (
+            <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: `${color}15`, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+              {icon}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [activePortal, setActivePortal] = useState('admin'); // 'admin' or 'buyer'
+      const [currentRole, setCurrentRole] = useState('procurement_buyer');
+      const [currentRoute, setCurrentRoute] = useState('dashboard');
+      const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+      const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+      // Core Data Collections
+      const [metrics, setMetrics] = useState(null);
+      const [tasks, setTasks] = useState([]);
+      const [activity, setActivity] = useState([]);
+      
+      // Suppliers & Filter State
+      const [allSuppliers, setAllSuppliers] = useState([]);
+      const [activeSupFilter, setActiveSupFilter] = useState('Total');
+      const [supSearchTerm, setSupSearchTerm] = useState('');
+      const [selectedSupplierId, setSelectedSupplierId] = useState(1);
+      const [supplierDetail, setSupplierDetail] = useState(null);
+
+      // Sourcing & Bids
+      const [events, setEvents] = useState([]);
+      const [activeEventFilter, setActiveEventFilter] = useState('Total');
+      const [selectedEventId, setSelectedEventId] = useState(1);
+      const [eventDetail, setEventDetail] = useState(null);
+      const [isCompareOpen, setIsCompareOpen] = useState(false);
+      const [comparisonData, setComparisonData] = useState(null);
+
+      // Requisitions State
+      const [allRequisitions, setAllRequisitions] = useState([]);
+      const [activePrFilter, setActivePrFilter] = useState('Total');
+      const [selectedPrDetail, setSelectedPrDetail] = useState(null);
+      const [isCreatePrOpen, setIsCreatePrOpen] = useState(false);
+      const [newPrDesc, setNewPrDesc] = useState('');
+      const [newPrDept, setNewPrDept] = useState('Information Technology');
+      const [newPrItem, setNewPrItem] = useState('Cisco Catalyst 9300 48-Port Switch');
+      const [newPrQty, setNewPrQty] = useState(5);
+      const [newPrPrice, setNewPrPrice] = useState(3200);
+
+      // Categories & Items Master State
+      const [categories, setCategories] = useState([]);
+      const [items, setItems] = useState([]);
+      const [activeCatTab, setActiveCatTab] = useState('categories'); // 'categories' or 'items'
+      const [catSearchTerm, setCatSearchTerm] = useState('');
+
+      // Orders, Invoices, Clauses, Budgets, Workflows, ERP
+      const [orders, setOrders] = useState([]);
+      const [activePoFilter, setActivePoFilter] = useState('Total');
+      const [invoices, setInvoices] = useState([]);
+      const [activeInvFilter, setActiveInvFilter] = useState('Total');
+      const [clauses, setClauses] = useState([]);
+      const [activeClauseFilter, setActiveClauseFilter] = useState('All');
+      const [budgets, setBudgets] = useState([]);
+      const [auctions, setAuctions] = useState([]);
+      const [activeAuctionFilter, setActiveAuctionFilter] = useState('Total');
+      const [workflows, setWorkflows] = useState([]);
+      const [activeWorkflowTab, setActiveWorkflowTab] = useState('Purchase Request');
+      const [erpStatus, setErpStatus] = useState(null);
+      const [erpTesting, setErpTesting] = useState(false);
+      const [erpTestResult, setErpTestResult] = useState(null);
+
+      // Buyer Portal Specific State
+      const [wizardStep, setWizardStep] = useState(5);
+      const [buyerBestBid, setBuyerBestBid] = useState(52000.0);
+      const [myNewBidInput, setMyNewBidInput] = useState(51500.0);
+
+      // Floating AI Assistant State
+      const [isAiOpen, setIsAiOpen] = useState(false);
+
+      // Load initial data on portal / route change
+      useEffect(() => {
+        loadData();
+      }, [activePortal, currentRoute]);
+
+      const loadData = async () => {
+        try {
+          const [m, t, act, supRes, evts, pos, invs, cls, bgs, aucs, prs, cats, itms, wfs, erp] = await Promise.all([
+            apiRequest('/dashboard/metrics').catch(() => null),
+            apiRequest('/dashboard/tasks').catch(() => []),
+            apiRequest('/dashboard/recent-activity').catch(() => []),
+            apiRequest('/suppliers?status=Total').catch(() => ({ items: [], counts: {} })),
+            apiRequest('/sourcing-events').catch(() => []),
+            apiRequest('/purchase-orders').catch(() => []),
+            apiRequest('/invoices').catch(() => []),
+            apiRequest('/clauses').catch(() => []),
+            apiRequest('/budgets').catch(() => []),
+            apiRequest('/auctions').catch(() => []),
+            apiRequest('/requisitions?status=Total').catch(() => ({ items: [], counts: {} })),
+            apiRequest('/categories').catch(() => []),
+            apiRequest('/items').catch(() => []),
+            apiRequest('/workflows').catch(() => []),
+            apiRequest('/integrations/erp').catch(() => null)
+          ]);
+
+          if (m) setMetrics(m);
+          setTasks(t || []);
+          setActivity(act || []);
+          setAllSuppliers(supRes?.items || []);
+          setEvents(evts || []);
+          setOrders(pos || []);
+          setInvoices(invs || []);
+          setClauses(cls || []);
+          setBudgets(bgs || []);
+          setAuctions(aucs || []);
+          setAllRequisitions(prs?.items || []);
+          setCategories(cats || []);
+          setItems(itms || []);
+          setWorkflows(wfs || []);
+          setErpStatus(erp);
+        } catch (e) {
+          console.error("Data load error:", e);
+        }
+      };
+
+      const handleSwitchRole = async (role, portal) => {
+        try {
+          await apiRequest('/auth/switch-role', { method: 'POST', body: JSON.stringify({ role, portal, supplier_id: 1 }) });
+          setActivePortal(portal);
+          setCurrentRole(role);
+          setCurrentRoute(portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
+          setShowProfileMenu(false);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      const openSupplier = async (id) => {
+        setSelectedSupplierId(id);
+        const detail = await apiRequest(`/suppliers/${id}`);
+        setSupplierDetail(detail);
+        setCurrentRoute('supplier-detail');
+      };
+
+      const openEvent = async (id) => {
+        setSelectedEventId(id);
+        const detail = await apiRequest(`/sourcing-events/${id}`);
+        setEventDetail(detail);
+        setCurrentRoute('bid-detail');
+      };
+
+      const openComparison = async (id) => {
+        const comp = await apiRequest(`/sourcing-events/${id}/comparison`);
+        setComparisonData(comp);
+        setIsCompareOpen(true);
+      };
+
+      const handleAward = async (supplierId) => {
+        const res = await apiRequest(`/sourcing-events/${selectedEventId}/award`, {
+          method: 'POST',
+          body: JSON.stringify({ winning_supplier_id: supplierId, award_notes: "Lowest evaluated TCO" })
+        });
+        alert(`Award confirmed! PO Generated: ${res.po_number}`);
+        setIsCompareOpen(false);
+        loadData();
+        setCurrentRoute('purchase-orders');
+      };
+
+      const handleTestErp = async () => {
+        setErpTesting(true);
+        try {
+          const res = await apiRequest('/integrations/erp/test', { method: 'POST' });
+          setErpTestResult(res);
+        } catch (e) {
+          setErpTestResult({ status: 'error', message: e.message });
+        } finally {
+          setErpTesting(false);
+        }
+      };
+
+      const handleCreatePrSubmit = async (e) => {
+        e.preventDefault();
+        try {
+          const res = await apiRequest('/requisitions', {
+            method: 'POST',
+            body: JSON.stringify({
+              description: newPrDesc || 'Custom Datacenter Equipment Requisition',
+              department: newPrDept,
+              delivery_date: '2026-12-20',
+              destination: 'Central Logistics Hub, Dallas TX',
+              lines: [
+                {
+                  description: newPrItem,
+                  category: 'Networking Hardware',
+                  quantity: Number(newPrQty),
+                  uom: 'Unit',
+                  unit_price: Number(newPrPrice)
+                }
+              ]
+            })
+          });
+          alert(`Requisition ${res.requisition?.pr_number || 'created'} saved successfully!`);
+          setIsCreatePrOpen(false);
+          loadData();
+        } catch (e) {
+          alert('Failed to create requisition: ' + e.message);
+        }
+      };
+
+      // COMPUTED FILTERED ARRAYS (Instant, synchronous, 100% reliable)
+      const supplierCounts = useMemo(() => {
+        const counts = { Total: allSuppliers.length };
+        allSuppliers.forEach(s => {
+          counts[s.status] = (counts[s.status] || 0) + 1;
+        });
+        return counts;
+      }, [allSuppliers]);
+
+      const displayedSuppliers = useMemo(() => {
+        return allSuppliers.filter(s => {
+          const matchesStatus = (activeSupFilter === 'Total') || (s.status === activeSupFilter);
+          const matchesSearch = !supSearchTerm || 
+            s.legal_name.toLowerCase().includes(supSearchTerm.toLowerCase()) ||
+            s.code.toLowerCase().includes(supSearchTerm.toLowerCase()) ||
+            s.country.toLowerCase().includes(supSearchTerm.toLowerCase()) ||
+            s.email.toLowerCase().includes(supSearchTerm.toLowerCase());
+          return matchesStatus && matchesSearch;
+        });
+      }, [allSuppliers, activeSupFilter, supSearchTerm]);
+
+      const requisitionCounts = useMemo(() => {
+        const counts = { Total: allRequisitions.length };
+        allRequisitions.forEach(r => {
+          counts[r.status] = (counts[r.status] || 0) + 1;
+        });
+        return counts;
+      }, [allRequisitions]);
+
+      const displayedRequisitions = useMemo(() => {
+        return allRequisitions.filter(r => {
+          if (activePrFilter === 'Total') return true;
+          return r.status === activePrFilter;
+        });
+      }, [allRequisitions, activePrFilter]);
+
+      const displayedOrders = useMemo(() => {
+        return orders.filter(o => {
+          if (activePoFilter === 'Total') return true;
+          return o.po.status === activePoFilter;
+        });
+      }, [orders, activePoFilter]);
+
+      const displayedInvoices = useMemo(() => {
+        return invoices.filter(i => {
+          if (activeInvFilter === 'Total') return true;
+          return i.invoice.status === activeInvFilter;
+        });
+      }, [invoices, activeInvFilter]);
+
+      const displayedAuctions = useMemo(() => {
+        return auctions.filter(a => {
+          if (activeAuctionFilter === 'Total') return true;
+          return a.status === activeAuctionFilter;
+        });
+      }, [auctions, activeAuctionFilter]);
+
+      const displayedClauses = useMemo(() => {
+        return clauses.filter(c => {
+          if (activeClauseFilter === 'All') return true;
+          return c.clause_type === activeClauseFilter;
+        });
+      }, [clauses, activeClauseFilter]);
+
+      // Navigation Items
+      const adminNav = [
+        { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+        { id: 'suppliers', label: 'Suppliers', icon: '🏢' },
+        { id: 'categories', label: 'Categories & Items', icon: '📦' },
+        { id: 'requisitions', label: 'Requisitions', icon: '📝' },
+        { id: 'bids', label: 'Bids & Sourcing', icon: '🎯' },
+        { id: 'purchase-orders', label: 'Purchase Orders', icon: '📋' },
+        { id: 'invoices', label: 'Invoices & AP', icon: '💳' },
+        { id: 'contracts', label: 'Contracts & Clauses', icon: '📜' },
+        { id: 'auctions', label: 'Live Auctions', icon: '⚡' },
+        { id: 'budgets', label: 'Budgets & Spend', icon: '💰' },
+        { id: 'workflows', label: 'Approval Workflows', icon: '⚙️' },
+        { id: 'integrations', label: 'ERP Integrations', icon: '🔌' },
+        { id: 'ai-analysis', label: 'AI Market Intelligence', icon: '✨' }
+      ];
+
+      const buyerNav = [
+        { id: 'buyer-dashboard', label: 'Supplier Dashboard', icon: '📊' },
+        { id: 'registration-wizard', label: 'Registration Wizard', icon: '🚀' },
+        { id: 'buyer-bids', label: 'My Bids & Invitations', icon: '🎯' },
+        { id: 'buyer-pos', label: 'Purchase Orders', icon: '📋' },
+        { id: 'buyer-invoices', label: 'Submit Invoices', icon: '💳' },
+        { id: 'buyer-contracts', label: 'Contracts', icon: '📜' },
+        { id: 'buyer-auctions', label: 'Auction Console', icon: '⚡' }
+      ];
+
+      const navItems = activePortal === 'admin' ? adminNav : buyerNav;
+
+      return (
+        <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f7f7f8' }}>
+          {/* PURPLE SIDEBAR (#2e1857, 242px) */}
+          <aside style={{ width: isSidebarCollapsed ? '68px' : '242px', backgroundColor: '#2e1857', color: '#ffffff', height: '100vh', position: 'sticky', top: 0, display: 'flex', flexDirection: 'column', flexShrink: 0, zIndex: 45, overflowY: 'auto' }}>
+            <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#ffffff', color: '#2e1857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '18px' }}>
+                S
+              </div>
+              {!isSidebarCollapsed && (
+                <div>
+                  <div style={{ fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px', lineHeight: 1 }}>SellMyGoods</div>
+                  <div style={{ fontSize: '10px', color: '#b5a5cf', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: '3px' }}>Enterprise Portal</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '12px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {navItems.map((item) => {
+                const isActive = currentRoute === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      if (item.id === 'suppliers') setActiveSupFilter('Total');
+                      if (item.id === 'requisitions') setActivePrFilter('Total');
+                      setCurrentRoute(item.id);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      backgroundColor: isActive ? '#482a73' : 'transparent',
+                      color: isActive ? '#ffffff' : '#cfc3e5',
+                      fontWeight: isActive ? '600' : '400',
+                      fontSize: '13.5px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>{item.icon}</span>
+                    {!isSidebarCollapsed && <span>{item.label}</span>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {!isSidebarCollapsed && (
+              <div style={{ padding: '14px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', fontSize: '11px', color: '#a394bf', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Build Spec v2.0 Active</span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0f9d78' }} title="Server Online" />
+              </div>
+            )}
+          </aside>
+
+          {/* MAIN APPLICATION CANVAS */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            {/* TOP HEADER (58px) */}
+            <header style={{ height: '58px', backgroundColor: '#ffffff', borderBottom: '1px solid #e6e6e9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 40 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', color: '#73767b', fontSize: '16px' }}>
+                  ☰
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ backgroundColor: activePortal === 'admin' ? '#f0e5ff' : '#e0f2fe', color: activePortal === 'admin' ? '#432177' : '#0369a1', padding: '4px 10px', borderRadius: '6px', fontSize: '13px', fontWeight: '600' }}>
+                    ● {activePortal === 'admin' ? 'Admin Portal' : 'Buyer Portal'}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#73767b' }}>
+                    {activePortal === 'admin' ? '— Internal Organization Workspace' : '— Supplier Workspace (Precision Components Ltd)'}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                {/* Profile & Role Switcher */}
+                <div style={{ position: 'relative' }}>
+                  <div onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#432177', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '12px' }}>
+                      {currentRole === 'supplier_user' ? 'ER' : 'MV'}
+                    </div>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#242424' }}>
+                        {currentRole === 'supplier_user' ? 'Elena Rostova' : 'Marcus Vance'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#73767b' }}>
+                        {currentRole === 'supplier_user' ? 'Precision Components' : 'Procurement Buyer'}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#73767b' }}>▾</span>
+                  </div>
+
+                  {showProfileMenu && (
+                    <div style={{ position: 'absolute', right: 0, top: '46px', width: '300px', backgroundColor: '#fff', border: '1px solid #e6e6e9', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', padding: '8px 0', zIndex: 50 }}>
+                      <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f1f4', fontSize: '11px', color: '#73767b', fontWeight: '700' }}>
+                        SWITCH ACTIVE USER & PORTAL
+                      </div>
+                      <div onClick={() => handleSwitchRole('procurement_buyer', 'admin')} style={{ padding: '10px 16px', fontSize: '13px', cursor: 'pointer', backgroundColor: currentRole === 'procurement_buyer' ? '#f5f0ff' : 'transparent', color: currentRole === 'procurement_buyer' ? '#432177' : '#242424', fontWeight: currentRole === 'procurement_buyer' ? '700' : '400' }}>
+                        Marcus Vance (Admin Procurement Buyer)
+                      </div>
+                      <div onClick={() => handleSwitchRole('supplier_user', 'buyer')} style={{ padding: '10px 16px', fontSize: '13px', cursor: 'pointer', backgroundColor: currentRole === 'supplier_user' ? '#f5f0ff' : 'transparent', color: currentRole === 'supplier_user' ? '#432177' : '#242424', fontWeight: currentRole === 'supplier_user' ? '700' : '400' }}>
+                        Elena Rostova (Buyer Portal — Supplier Workspace)
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            {/* CONTENT AREA */}
+            <main style={{ flex: 1, padding: '24px', maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 1: ADMIN DASHBOARD (Image 1) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'dashboard' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#242424' }}>Enterprise Procurement Dashboard</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#73767b' }}>Consolidated overview of requisitions, sourcing, contracts, and supplier compliance</p>
+                    </div>
+                    <button onClick={() => { setIsCreatePrOpen(true); setCurrentRoute('requisitions'); }} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                      + Create Requisition
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px', marginBottom: '24px' }}>
+                    <MetricCard label="Total System Users" count={metrics?.top_metrics?.total_users || 1248} icon="👥" color="#432177" />
+                    <MetricCard label="Active Organization Users" count={metrics?.top_metrics?.active_org_users || 842} icon="🏢" color="#0f9d78" />
+                    <MetricCard label="External Supplier Accounts" count={metrics?.top_metrics?.supplier_users || 406} icon="🤝" color="#3676ce" />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Pending Approval Requests</h3>
+                        <span style={{ fontSize: '12px', color: '#b65c16', backgroundColor: '#fff0d8', padding: '2px 8px', borderRadius: '12px', fontWeight: '600' }}>Action Required</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        {[
+                          { label: 'Supplier Onboarding', count: 1, route: 'suppliers' },
+                          { label: 'Purchase Requests', count: 1, route: 'requisitions' },
+                          { label: 'Purchase Orders', count: 1, route: 'purchase-orders' },
+                          { label: 'Invoices (3-Way)', count: 1, route: 'invoices' },
+                          { label: 'Budget Changes', count: 1, route: 'budgets' },
+                          { label: 'Contract Sign-offs', count: 1, route: 'contracts' }
+                        ].map((item, i) => (
+                          <div key={i} onClick={() => setCurrentRoute(item.route)} style={{ backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px', padding: '12px', cursor: 'pointer' }}>
+                            <div style={{ fontSize: '11.5px', color: '#73767b' }}>{item.label}</div>
+                            <div style={{ fontSize: '18px', fontWeight: '700', color: '#432177', marginTop: '4px' }}>{item.count}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700' }}>My Procurement Tracking</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                        <div onClick={() => setCurrentRoute('requisitions')} style={{ backgroundColor: '#f9f9fb', border: '1px solid #ededf2', borderRadius: '8px', padding: '14px', cursor: 'pointer' }}>
+                          <div style={{ fontSize: '12px', color: '#73767b' }}>Approved Requisitions Ready</div>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }}>1 Approved PR</div>
+                        </div>
+                        <div onClick={() => setCurrentRoute('purchase-orders')} style={{ backgroundColor: '#f9f9fb', border: '1px solid #ededf2', borderRadius: '8px', padding: '14px', cursor: 'pointer' }}>
+                          <div style={{ fontSize: '12px', color: '#73767b' }}>Active Issued POs</div>
+                          <div style={{ fontSize: '20px', fontWeight: '700', color: '#432177', marginTop: '4px' }}>3 Orders</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tasks & Activity */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>Tasks To Do</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {tasks.map((task) => (
+                          <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid #ededf0', borderRadius: '8px' }}>
+                            <div>
+                              <div style={{ fontWeight: '600', fontSize: '13.5px', color: '#242424' }}>{task.title}</div>
+                              <div style={{ fontSize: '12px', color: '#73767b', marginTop: '2px' }}>{task.record_code} • {task.assignee_role} • Due: {task.due_date}</div>
+                            </div>
+                            <StatusBadge status={task.status} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>Recent Audit Stream</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {activity.map((act) => (
+                          <div key={act.id} style={{ fontSize: '13px' }}>
+                            <div><strong>{act.actor}</strong> {act.action}</div>
+                            <div style={{ fontSize: '11px', color: '#73767b', marginTop: '2px' }}>{act.time}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 2: SUPPLIERS DIRECTORY (Image 3) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'suppliers' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Supplier Directory & Repository</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Centrally manage approved vendor records, risk rating, and compliance certificates</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => alert("AI Ranking: Precision Components Ltd holds highest rating (94.5%) with 98.2% on-time fulfillment.")} style={{ padding: '8px 14px', backgroundColor: '#f0e5ff', color: '#432177', border: '1px solid #d8b4fe', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                        ✨ AI Supplier Rank
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter Tabs - STRICT SYNCHRONOUS CLIENT FILTER */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+                      {['Total', 'Active', 'Draft', 'Pending Approval', 'More Info Required', 'Changes in Draft', 'Rejected'].map((tab) => {
+                        const isSelected = activeSupFilter === tab;
+                        const count = supplierCounts[tab] || 0;
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveSupFilter(tab)}
+                            style={{
+                              padding: '8px 14px',
+                              borderRadius: '8px',
+                              border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+                              backgroundColor: isSelected ? '#432177' : '#ffffff',
+                              color: isSelected ? '#ffffff' : '#242424',
+                              fontWeight: isSelected ? '700' : '400',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '13px',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <span>{tab}</span>
+                            <span style={{
+                              backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#f0f0f2',
+                              padding: '1px 6px',
+                              borderRadius: '10px',
+                              fontSize: '11px',
+                              fontWeight: '700'
+                            }}>
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Search suppliers by name, code, country..."
+                      value={supSearchTerm}
+                      onChange={(e) => setSupSearchTerm(e.target.value)}
+                      style={{ padding: '8px 12px', border: '1px solid #e6e6e9', borderRadius: '6px', fontSize: '13px', width: '280px' }}
+                    />
+                  </div>
+
+                  <div style={{ fontSize: '12px', color: '#73767b', marginBottom: '10px' }}>
+                    Showing <strong>{displayedSuppliers.length}</strong> of <strong>{allSuppliers.length}</strong> suppliers (Filter: <strong>{activeSupFilter}</strong>)
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 16px' }}>Code</th>
+                          <th style={{ padding: '12px 16px' }}>Supplier Entity</th>
+                          <th style={{ padding: '12px 16px' }}>Status</th>
+                          <th style={{ padding: '12px 16px' }}>Current Approver</th>
+                          <th style={{ padding: '12px 16px' }}>Country</th>
+                          <th style={{ padding: '12px 16px' }}>Email</th>
+                          <th style={{ padding: '12px 16px' }}>Performance</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedSuppliers.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#73767b' }}>
+                              No suppliers found with status "<strong>{activeSupFilter}</strong>".
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedSuppliers.map((s) => (
+                            <tr key={s.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 16px', fontWeight: '700', color: '#432177', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => openSupplier(s.id)}>
+                                {s.code}
+                              </td>
+                              <td style={{ padding: '12px 16px', fontWeight: '500' }}>{s.legal_name}</td>
+                              <td style={{ padding: '12px 16px' }}><StatusBadge status={s.status} /></td>
+                              <td style={{ padding: '12px 16px', color: '#555' }}>{s.current_approver}</td>
+                              <td style={{ padding: '12px 16px' }}>{s.country}</td>
+                              <td style={{ padding: '12px 16px', color: '#73767b' }}>{s.email}</td>
+                              <td style={{ padding: '12px 16px', color: '#0f9d78', fontWeight: '700' }}>{s.performance_score}%</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                <button onClick={() => openSupplier(s.id)} style={{ padding: '5px 12px', border: '1px solid #e6e6e9', borderRadius: '4px', background: '#fff', cursor: 'pointer', fontWeight: '600' }}>
+                                  View Profile
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 3: SUPPLIER DETAIL (Images 2, 4, 5, 6) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'supplier-detail' && supplierDetail && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+                    <button onClick={() => setCurrentRoute('suppliers')} style={{ padding: '6px 12px', border: '1px solid #e6e6e9', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontWeight: '600' }}>
+                      ← Back to Suppliers
+                    </button>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>{supplierDetail.supplier.legal_name}</h1>
+                        <StatusBadge status={supplierDetail.supplier.status} />
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#73767b' }}>Code: {supplierDetail.supplier.code} • License: {supplierDetail.supplier.license_no}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px', marginBottom: '20px' }}>
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>Company Information</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+                        <div><span style={{ color: '#73767b' }}>Tax ID:</span> <strong>{supplierDetail.supplier.tax_identifier || 'US-94-8821940'}</strong></div>
+                        <div><span style={{ color: '#73767b' }}>Payment Terms:</span> <strong style={{ color: '#0f9d78' }}>{supplierDetail.supplier.payment_terms || 'Net 30'}</strong></div>
+                        <div><span style={{ color: '#73767b' }}>Phone:</span> {supplierDetail.supplier.contact_no}</div>
+                        <div><span style={{ color: '#73767b' }}>Email:</span> {supplierDetail.supplier.email}</div>
+                        <div><span style={{ color: '#73767b' }}>Place of Issue:</span> {supplierDetail.supplier.place_of_issue || 'Delaware, USA'}</div>
+                        <div><span style={{ color: '#73767b' }}>Performance Score:</span> <strong style={{ color: '#0f9d78' }}>{supplierDetail.supplier.performance_score}%</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>Primary Contact & Signatory</h3>
+                      <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div>Name: <strong>Elena Rostova</strong></div>
+                        <div>Title: Director of Strategic Accounts</div>
+                        <div>Email: elena.rostova@precisioncomponents.com</div>
+                        <div>Phone: +1 (555) 234-8901</div>
+                        <div style={{ marginTop: '6px', color: '#0f9d78', fontWeight: '600' }}>✓ Authorized Signatory (Verified)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bank & Docs */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>Banking & Remittance Information</h3>
+                      <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <div>Bank Name: <strong>JPMorgan Chase Bank, N.A.</strong></div>
+                        <div>Account Name: Precision Components Ltd</div>
+                        <div>Account Number: <span className="font-mono-numbers">••••••••9942</span></div>
+                        <div>SWIFT / BIC: <span className="font-mono-numbers">CHASUS33XXX</span></div>
+                        <div style={{ color: '#0f9d78', fontWeight: '600', marginTop: '4px' }}>✓ Remittance Route Validated via Micro-Deposit</div>
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>Verified Compliance Certificates</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {[
+                          { title: 'ISO 9001:2015 Quality Management', file: 'ISO_9001_Precision_2026.pdf' },
+                          { title: 'W-9 Federal Tax Certification (Signed)', file: 'W9_Signed_2026.pdf' },
+                          { title: 'Certificate of Good Standing (Delaware)', file: 'Cert_Good_Standing.pdf' }
+                        ].map((d, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid #ededf0', borderRadius: '6px', fontSize: '12.5px' }}>
+                            <div>
+                              <div style={{ fontWeight: '600' }}>{d.title}</div>
+                              <div style={{ color: '#73767b', fontSize: '11px' }}>{d.file}</div>
+                            </div>
+                            <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', padding: '2px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>Verified</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 4: CATEGORIES & ITEMS MASTER (Image 12) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'categories' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Category Hierarchy & Item Master Catalog</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Manage product classification taxonomy, standard pricing cards, and approved SKU catalogs</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => alert("Add Catalog Item / Category modal")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                        + Add Category or Item
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Subnav Tabs */}
+                  <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                    <button
+                      onClick={() => setActiveCatTab('categories')}
+                      style={{
+                        padding: '10px 18px',
+                        borderRadius: '8px',
+                        border: `1px solid ${activeCatTab === 'categories' ? '#432177' : '#e6e6e9'}`,
+                        backgroundColor: activeCatTab === 'categories' ? '#432177' : '#ffffff',
+                        color: activeCatTab === 'categories' ? '#ffffff' : '#242424',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📁 Categories Hierarchy ({categories.length || 7})
+                    </button>
+                    <button
+                      onClick={() => setActiveCatTab('items')}
+                      style={{
+                        padding: '10px 18px',
+                        borderRadius: '8px',
+                        border: `1px solid ${activeCatTab === 'items' ? '#432177' : '#e6e6e9'}`,
+                        backgroundColor: activeCatTab === 'items' ? '#432177' : '#ffffff',
+                        color: activeCatTab === 'items' ? '#ffffff' : '#242424',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      📦 Item Master Catalog ({items.length || 4})
+                    </button>
+                  </div>
+
+                  {/* VIEW 1: CATEGORIES TABLE */}
+                  {activeCatTab === 'categories' && (
+                    <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                          <tr>
+                            <th style={{ padding: '12px 18px' }}>Category Code</th>
+                            <th style={{ padding: '12px 18px' }}>Category Name</th>
+                            <th style={{ padding: '12px 18px' }}>Hierarchy Level</th>
+                            <th style={{ padding: '12px 18px' }}>Description</th>
+                            <th style={{ padding: '12px 18px' }}>Status</th>
+                            <th style={{ padding: '12px 18px', textAlign: 'right' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {categories.map((c) => (
+                            <tr key={c.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{c.code}</td>
+                              <td style={{ padding: '12px 18px', fontWeight: '600' }}>{c.name}</td>
+                              <td style={{ padding: '12px 18px' }}>
+                                <span style={{ backgroundColor: c.parent_id ? '#f0e5ff' : '#f3f4f6', color: c.parent_id ? '#432177' : '#4b5563', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                                  {c.parent_id ? `Subcategory of ${c.parent_name}` : 'Top-Level Category'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 18px', color: '#555' }}>{c.description}</td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={c.is_active ? 'Active' : 'Draft'} /></td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                                <button onClick={() => alert(`Category ${c.code} settings`)} style={{ padding: '4px 10px', border: '1px solid #e6e6e9', borderRadius: '4px', background: '#fff', cursor: 'pointer' }}>
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* VIEW 2: ITEM MASTER CATALOG */}
+                  {activeCatTab === 'items' && (
+                    <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                          <tr>
+                            <th style={{ padding: '12px 18px' }}>SKU</th>
+                            <th style={{ padding: '12px 18px' }}>Item Name & Spec</th>
+                            <th style={{ padding: '12px 18px' }}>Category</th>
+                            <th style={{ padding: '12px 18px' }}>UOM</th>
+                            <th style={{ padding: '12px 18px', textAlign: 'right' }}>Standard Price</th>
+                            <th style={{ padding: '12px 18px' }}>Preferred Supplier</th>
+                            <th style={{ padding: '12px 18px' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {items.map((itm) => (
+                            <tr key={itm.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{itm.sku}</td>
+                              <td style={{ padding: '12px 18px' }}>
+                                <div style={{ fontWeight: '600' }}>{itm.name}</div>
+                                <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '2px' }}>{itm.description}</div>
+                              </td>
+                              <td style={{ padding: '12px 18px' }}>{itm.category_name}</td>
+                              <td style={{ padding: '12px 18px' }}>{itm.uom}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
+                                ${itm.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {itm.currency}
+                              </td>
+                              <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '500' }}>{itm.preferred_supplier}</td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={itm.is_active ? 'Active' : 'Draft'} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 5: PURCHASE REQUISITIONS (Images 7, 11) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'requisitions' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Purchase Requisitions (PR)</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Initiate, review, and convert corporate purchase requests into Sourcing RFQs or direct Purchase Orders</p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => setIsCreatePrOpen(true)} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                        + Create Requisition
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filter Tabs */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {['Total', 'Approved', 'Pending Approval', 'Draft'].map((tab) => {
+                      const isSelected = activePrFilter === tab;
+                      const count = requisitionCounts[tab] || 0;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActivePrFilter(tab)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+                            backgroundColor: isSelected ? '#432177' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#242424',
+                            fontWeight: isSelected ? '700' : '400',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '13px'
+                          }}
+                        >
+                          <span>{tab}</span>
+                          <span style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#f0f0f2', padding: '1px 6px', borderRadius: '10px', fontSize: '11px', fontWeight: '700' }}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ fontSize: '12px', color: '#73767b', marginBottom: '10px' }}>
+                    Showing <strong>{displayedRequisitions.length}</strong> of <strong>{allRequisitions.length}</strong> requisitions (Filter: <strong>{activePrFilter}</strong>)
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>PR Number</th>
+                          <th style={{ padding: '12px 18px' }}>Description</th>
+                          <th style={{ padding: '12px 18px' }}>Requester</th>
+                          <th style={{ padding: '12px 18px' }}>Department</th>
+                          <th style={{ padding: '12px 18px' }}>Budget Status</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Total Amount</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedRequisitions.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" style={{ padding: '40px', textAlign: 'center', color: '#73767b' }}>
+                              No purchase requisitions matching status "<strong>{activePrFilter}</strong>".
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedRequisitions.map((pr) => (
+                            <tr key={pr.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => setSelectedPrDetail(pr)}>
+                                {pr.pr_number}
+                              </td>
+                              <td style={{ padding: '12px 18px', fontWeight: '500' }}>{pr.description}</td>
+                              <td style={{ padding: '12px 18px' }}>{pr.requester_name}</td>
+                              <td style={{ padding: '12px 18px', color: '#555' }}>{pr.department}</td>
+                              <td style={{ padding: '12px 18px' }}>
+                                <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                                  ✓ Headroom Validated
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
+                                ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                              </td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={pr.status} /></td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                                <button onClick={() => setSelectedPrDetail(pr)} style={{ padding: '5px 12px', border: '1px solid #432177', color: '#432177', backgroundColor: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                                  View / Convert
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* PR Detail Drawer / Modal */}
+                  {selectedPrDetail && (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                      <div style={{ backgroundColor: '#fff', borderRadius: '14px', width: '90%', maxWidth: '850px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div style={{ padding: '18px 24px', borderBottom: '1px solid #e6e6e9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>{selectedPrDetail.pr_number} — Requisition Summary</h2>
+                            <StatusBadge status={selectedPrDetail.status} />
+                          </div>
+                          <button onClick={() => setSelectedPrDetail(null)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontWeight: '700' }}>
+                            ✕ Close
+                          </button>
+                        </div>
+                        <div style={{ padding: '24px', overflowY: 'auto' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px', fontSize: '13px' }}>
+                            <div><strong>Title:</strong> {selectedPrDetail.description}</div>
+                            <div><strong>Department:</strong> {selectedPrDetail.department}</div>
+                            <div><strong>Requester:</strong> {selectedPrDetail.requester_name}</div>
+                            <div><strong>Target Delivery:</strong> {selectedPrDetail.delivery_date}</div>
+                            <div><strong>GL Account:</strong> <span className="font-mono-numbers">6100-Equipment (CC-1020-IT)</span></div>
+                            <div><strong>Requisition Value:</strong> <strong style={{ color: '#432177', fontSize: '15px' }} className="font-mono-numbers">${selectedPrDetail.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</strong></div>
+                          </div>
+
+                          <div style={{ backgroundColor: '#f0e5ff', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '12.5px', color: '#432177' }}>
+                            💡 <strong>Section I3 Budget Check:</strong> Approved IT Cost Centre Pool ($50,000.00) has sufficient headroom to cover this requisition. No overrun exception required.
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button onClick={() => { alert(`Requisition ${selectedPrDetail.pr_number} successfully converted to Sourcing Event RFQ_2026_091!`); setSelectedPrDetail(null); setCurrentRoute('bids'); }} style={{ padding: '9px 18px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                              🎯 Convert to Sourcing RFQ →
+                            </button>
+                            <button onClick={() => { alert(`Requisition ${selectedPrDetail.pr_number} approved and issued as PO_2026_0142!`); setSelectedPrDetail(null); setCurrentRoute('purchase-orders'); }} style={{ padding: '9px 18px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                              📋 Direct Convert to PO →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Create Requisition Modal */}
+                  {isCreatePrOpen && (
+                    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                      <div style={{ backgroundColor: '#fff', borderRadius: '14px', width: '90%', maxWidth: '650px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div style={{ padding: '18px 24px', borderBottom: '1px solid #e6e6e9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0 }}>Create New Purchase Requisition</h2>
+                          <button onClick={() => setIsCreatePrOpen(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontWeight: '700' }}>
+                            ✕
+                          </button>
+                        </div>
+                        <form onSubmit={handleCreatePrSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <div>
+                            <label style={{ fontSize: '12.5px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '4px' }}>Requisition Title / Purpose</label>
+                            <input
+                              type="text"
+                              value={newPrDesc}
+                              onChange={(e) => setNewPrDesc(e.target.value)}
+                              placeholder="e.g. Cisco Managed Core Switches for Facility Hub"
+                              required
+                              style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e6e6e9', fontSize: '13px' }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '12.5px', fontWeight: '600', color: '#555', display: 'block', marginBottom: '4px' }}>Department</label>
+                            <select value={newPrDept} onChange={(e) => setNewPrDept(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #e6e6e9', fontSize: '13px' }}>
+                              <option>Information Technology</option>
+                              <option>Plant Operations</option>
+                              <option>Logistics & Supply Chain</option>
+                              <option>Corporate Facilities</option>
+                            </select>
+                          </div>
+                          <div style={{ border: '1px solid #ededf0', borderRadius: '8px', padding: '14px', backgroundColor: '#fcfcfd' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '10px' }}>Item Line</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px' }}>
+                              <div>
+                                <label style={{ fontSize: '11px', color: '#73767b' }}>Item Description</label>
+                                <input type="text" value={newPrItem} onChange={(e) => setNewPrItem(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e6e6e9', fontSize: '12px' }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '11px', color: '#73767b' }}>Quantity</label>
+                                <input type="number" min="1" value={newPrQty} onChange={(e) => setNewPrQty(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e6e6e9', fontSize: '12px' }} />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '11px', color: '#73767b' }}>Unit Price ($)</label>
+                                <input type="number" step="0.01" value={newPrPrice} onChange={(e) => setNewPrPrice(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e6e6e9', fontSize: '12px' }} />
+                              </div>
+                            </div>
+                            <div style={{ marginTop: '10px', textAlign: 'right', fontWeight: '700', fontSize: '14px', color: '#432177' }}>
+                              Estimated Total: ${(Number(newPrQty) * Number(newPrPrice)).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button type="button" onClick={() => setIsCreatePrOpen(false)} style={{ padding: '8px 16px', border: '1px solid #e6e6e9', background: '#fff', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+                            <button type="submit" style={{ padding: '8px 20px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>Save Requisition</button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 6: SOURCING EVENTS & BIDS (Images 17, 24, 26) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'bids' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Sourcing Events & RFx Matrix</h1>
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Event Code</th>
+                          <th style={{ padding: '12px 18px' }}>Title</th>
+                          <th style={{ padding: '12px 18px' }}>Type</th>
+                          <th style={{ padding: '12px 18px' }}>Stage</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Budget</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {events.map((e) => (
+                          <tr key={e.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                            <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177', textDecoration: 'underline', cursor: 'pointer' }} onClick={() => openEvent(e.id)}>
+                              {e.code}
+                            </td>
+                            <td style={{ padding: '12px 18px', fontWeight: '500' }}>{e.title}</td>
+                            <td style={{ padding: '12px 18px' }}><span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>{e.event_type}</span></td>
+                            <td style={{ padding: '12px 18px' }}><StatusBadge status={e.status} /></td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }} className="font-mono-numbers">${e.budget?.toLocaleString()} USD</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                              <button onClick={() => openEvent(e.id)} style={{ padding: '5px 12px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                                Manage Event →
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 7: BID DETAIL (Images 17, 24, 26) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'bid-detail' && eventDetail && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button onClick={() => setCurrentRoute('bids')} style={{ padding: '6px 12px', border: '1px solid #e6e6e9', borderRadius: '6px', background: '#fff', cursor: 'pointer', fontWeight: '600' }}>
+                        ← Back to Bids
+                      </button>
+                      <h1 style={{ fontSize: '22px', fontWeight: '700', margin: 0 }}>{eventDetail.event.code} — {eventDetail.event.title}</h1>
+                      <StatusBadge status={eventDetail.event.status} />
+                    </div>
+                    <button onClick={() => openComparison(eventDetail.event.id)} style={{ padding: '9px 18px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                      📊 Compare Bids & Award Decision →
+                    </button>
+                  </div>
+
+                  {/* Horizontal Stage Tracker */}
+                  <div className="card-enterprise" style={{ padding: '16px 20px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {['Prepare Bid', 'Publish', 'Closed', 'Technical Review', 'Commercial Review', 'Prepare Award', 'Award Approval', 'Awarded'].map((st, i) => (
+                        <div key={st} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: i < 3 ? '#0f9d78' : i === 3 ? '#432177' : '#73767b', fontWeight: i === 3 ? '700' : '500', fontSize: '12px' }}>
+                          <span style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: i < 3 ? '#0f9d78' : i === 3 ? '#432177' : '#e6e6e9', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>
+                            {i < 3 ? '✓' : i + 1}
+                          </span>
+                          <span>{st}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Supplier Quotes Table */}
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: '1px solid #e6e6e9', fontWeight: '700' }}>Submitted Supplier Quotes</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Supplier</th>
+                          <th style={{ padding: '12px 18px' }}>Technical Score</th>
+                          <th style={{ padding: '12px 18px' }}>Commercial Score</th>
+                          <th style={{ padding: '12px 18px' }}>Composite</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Net Quote</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {eventDetail.responses?.map((rObj) => (
+                          <tr key={rObj.response.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                            <td style={{ padding: '12px 18px', fontWeight: '600' }}>{rObj.supplier.legal_name}</td>
+                            <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>{rObj.response.technical_score}%</td>
+                            <td style={{ padding: '12px 18px', color: '#432177', fontWeight: '600' }}>{rObj.response.commercial_score}%</td>
+                            <td style={{ padding: '12px 18px', fontWeight: '700' }}>{rObj.response.total_score} pts</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${rObj.response.net_quote?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                              <button onClick={() => openComparison(eventDetail.event.id)} style={{ padding: '4px 10px', border: '1px solid #432177', color: '#432177', background: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                                View Comparison
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 8: PURCHASE ORDERS (Image 25) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'purchase-orders' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Issued Purchase Orders (PO)</h1>
+                  
+                  {/* Filter Tabs */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {['Total', 'Issued', 'Approved', 'Complete'].map((tab) => {
+                      const isSelected = activePoFilter === tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActivePoFilter(tab)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+                            backgroundColor: isSelected ? '#432177' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#242424',
+                            fontWeight: isSelected ? '700' : '400',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {tab}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>PO Number</th>
+                          <th style={{ padding: '12px 18px' }}>Supplier</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                          <th style={{ padding: '12px 18px' }}>Receipt Status</th>
+                          <th style={{ padding: '12px 18px' }}>Delivery Target</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Net Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedOrders.length === 0 ? (
+                          <tr><td colSpan="6" style={{ padding: '30px', textAlign: 'center', color: '#73767b' }}>No purchase orders matching status "{activePoFilter}".</td></tr>
+                        ) : (
+                          displayedOrders.map((o) => (
+                            <tr key={o.po.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{o.po.po_number}</td>
+                              <td style={{ padding: '12px 18px', fontWeight: '500' }}>{o.supplier_name}</td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={o.po.status} /></td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={o.po.receipt_status} /></td>
+                              <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>{o.po.delivery_date}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${o.po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 9: INVOICES & AP (Section E14) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'invoices' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Accounts Payable & 3-Way Match</h1>
+                  
+                  {/* Filter Tabs */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {['Total', 'Pending Approval', 'Verified', 'Approved'].map((tab) => {
+                      const isSelected = activeInvFilter === tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveInvFilter(tab)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+                            backgroundColor: isSelected ? '#432177' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#242424',
+                            fontWeight: isSelected ? '700' : '400',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {tab}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Invoice Number</th>
+                          <th style={{ padding: '12px 18px' }}>Supplier</th>
+                          <th style={{ padding: '12px 18px' }}>Match Status</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                          <th style={{ padding: '12px 18px' }}>Due Date</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Total Amount</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedInvoices.length === 0 ? (
+                          <tr><td colSpan="7" style={{ padding: '30px', textAlign: 'center', color: '#73767b' }}>No invoices matching status "{activeInvFilter}".</td></tr>
+                        ) : (
+                          displayedInvoices.map((inv) => (
+                            <tr key={inv.invoice.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{inv.invoice.invoice_number}</td>
+                              <td style={{ padding: '12px 18px', fontWeight: '500' }}>{inv.supplier_name}</td>
+                              <td style={{ padding: '12px 18px' }}>
+                                <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>✓ 3-Way Matched</span>
+                              </td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={inv.invoice.status} /></td>
+                              <td style={{ padding: '12px 18px' }}>{inv.invoice.due_date}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${inv.invoice.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                                <button onClick={() => alert(`Invoice ${inv.invoice.invoice_number} approved for payment release.`)} style={{ padding: '5px 12px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                                  Approve
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 10: CONTRACTS & CLAUSES (Image 29) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'contracts' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Contract Library & Pre-Approved Clauses</h1>
+                        <span style={{ backgroundColor: '#f0e5ff', color: '#432177', fontSize: '11px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px' }}>✨ AI Powered</span>
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Standardized legal frameworks, automated risk assessment, and clause governance</p>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Active Agreements */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 12px 0' }}>Active Master Services Agreements</h3>
+                    <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                          <tr>
+                            <th style={{ padding: '12px 18px' }}>Contract #</th>
+                            <th style={{ padding: '12px 18px' }}>Title</th>
+                            <th style={{ padding: '12px 18px' }}>Supplier Entity</th>
+                            <th style={{ padding: '12px 18px' }}>Term</th>
+                            <th style={{ padding: '12px 18px', textAlign: 'right' }}>Contract Value</th>
+                            <th style={{ padding: '12px 18px' }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { code: 'CTR_2026_004', title: 'Enterprise Master IT Equipment & Maintenance Agreement', supplier: 'Precision Components Ltd', term: '2026-01-01 to 2028-12-31', val: 250000, status: 'Active' },
+                            { code: 'CTR_2026_005', title: 'Global Express Freight & Regional Fulfilment SLA', supplier: 'Apex Global Logistics Inc', term: '2026-02-01 to 2027-01-31', val: 180000, status: 'Active' },
+                            { code: 'CTR_2026_006', title: 'Plant Tooling & Mechanical Maintenance Master Agreement', supplier: 'Vertex Industrial Tools Inc', term: '2026-12-01 to 2027-11-30', val: 95000, status: 'Draft' }
+                          ].map((c) => (
+                            <tr key={c.code} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{c.code}</td>
+                              <td style={{ padding: '12px 18px', fontWeight: '600' }}>{c.title}</td>
+                              <td style={{ padding: '12px 18px' }}>{c.supplier}</td>
+                              <td style={{ padding: '12px 18px', color: '#555' }}>{c.term}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${c.val.toLocaleString()} USD</td>
+                              <td style={{ padding: '12px 18px' }}><StatusBadge status={c.status} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Clause Library with Filter */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h3 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>Clause Repository</h3>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {['All', 'Legal', 'Compliance', 'Operational', 'Financial'].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setActiveClauseFilter(type)}
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              border: `1px solid ${activeClauseFilter === type ? '#432177' : '#e6e6e9'}`,
+                              backgroundColor: activeClauseFilter === type ? '#432177' : '#fff',
+                              color: activeClauseFilter === type ? '#fff' : '#242424',
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                        <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                          <tr>
+                            <th style={{ padding: '12px 18px' }}>Code</th>
+                            <th style={{ padding: '12px 18px' }}>Clause Title</th>
+                            <th style={{ padding: '12px 18px' }}>Type</th>
+                            <th style={{ padding: '12px 18px' }}>Standard Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {displayedClauses.map((c) => (
+                            <tr key={c.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                              <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{c.code}</td>
+                              <td style={{ padding: '12px 18px', fontWeight: '600' }}>{c.name}</td>
+                              <td style={{ padding: '12px 18px' }}>
+                                <span style={{ backgroundColor: '#f3f4f6', color: '#4b5563', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>{c.clause_type}</span>
+                              </td>
+                              <td style={{ padding: '12px 18px', color: '#555' }}>{c.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 11: LIVE DYNAMIC AUCTIONS (Image 14) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'auctions' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Live Dynamic Auctions & Disposal</h1>
+                  
+                  {/* Filter Tabs */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    {['Total', 'Live', 'Scheduled'].map((tab) => {
+                      const isSelected = activeAuctionFilter === tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveAuctionFilter(tab)}
+                          style={{
+                            padding: '8px 14px',
+                            borderRadius: '8px',
+                            border: `1px solid ${isSelected ? '#432177' : '#e6e6e9'}`,
+                            backgroundColor: isSelected ? '#432177' : '#ffffff',
+                            color: isSelected ? '#ffffff' : '#242424',
+                            fontWeight: isSelected ? '700' : '400',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {tab}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Auction #</th>
+                          <th style={{ padding: '12px 18px' }}>Title</th>
+                          <th style={{ padding: '12px 18px' }}>Type</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Reserve Price</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Current Best Bid</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Total Bids</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedAuctions.map((a) => (
+                          <tr key={a.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                            <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{a.auction_number}</td>
+                            <td style={{ padding: '12px 18px', fontWeight: '600' }}>{a.title}</td>
+                            <td style={{ padding: '12px 18px' }}>{a.auction_type}</td>
+                            <td style={{ padding: '12px 18px' }}><StatusBadge status={a.status} /></td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">${a.reserve_price?.toLocaleString()} USD</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '800', color: '#432177' }} className="font-mono-numbers">${a.current_best_bid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }}>{a.total_bids_placed || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 12: BUDGETS & SPEND (Section E16) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'budgets' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Fiscal Period Budget Ledgers</h1>
+                  <div className="card-enterprise" style={{ overflow: 'hidden', marginBottom: '24px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Cost Centre</th>
+                          <th style={{ padding: '12px 18px' }}>Department</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Approved Budget</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>PR Reserved</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>PO Committed</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Available Headroom</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {budgets.map((b) => (
+                          <tr key={b.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                            <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{b.cost_centre}</td>
+                            <td style={{ padding: '12px 18px', fontWeight: '600' }}>{b.department}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">${b.approved_budget?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#b65c16' }} className="font-mono-numbers">${b.pr_reserved?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#432177' }} className="font-mono-numbers">${b.po_committed?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">${b.available_balance?.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Spend Breakdown by Category */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '15px', fontWeight: '700' }}>Annual Spend by Category</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {[
+                          { name: 'IT & Networking Hardware', spend: 420000, pct: '38.5%' },
+                          { name: 'Logistics & Freight Services', spend: 280000, pct: '25.7%' },
+                          { name: 'Plant & Industrial Machinery', spend: 195000, pct: '17.9%' },
+                          { name: 'Corporate Facilities & Admin', spend: 110000, pct: '10.1%' }
+                        ].map((c, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                            <span>{c.name}</span>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                              <span style={{ fontWeight: '700' }} className="font-mono-numbers">${c.spend.toLocaleString()}</span>
+                              <span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>{c.pct}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '20px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '15px', fontWeight: '700' }}>Negotiated Savings Realization</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', textAlign: 'center' }}>
+                        <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11.5px', color: '#73767b' }}>Identified Savings</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#432177', marginTop: '4px' }}>$128,000</div>
+                        </div>
+                        <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
+                          <div style={{ fontSize: '11.5px', color: '#73767b' }}>Realized In Bank</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }}>$61,400</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 13: APPROVAL WORKFLOWS (Image 10) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'workflows' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Approval Workflow Designer & Governance</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Configure multi-tier authorization thresholds, SLA timeout escalations, and automated rule routing</p>
+                    </div>
+                    <button onClick={() => alert("Simulation: Tested on PR_00084 ($32,000.00). Routing: Step 1 (Auto-passed) -> Step 2 (Finance Controller Assigned).")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                      ⚡ Test Routing Simulation
+                    </button>
+                  </div>
+
+                  {/* Module Tabs */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                    {['Purchase Request', 'Purchase Order', 'Supplier Onboarding', 'Invoice 3-Way Exception'].map((mod) => (
+                      <button
+                        key={mod}
+                        onClick={() => setActiveWorkflowTab(mod)}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          border: `1px solid ${activeWorkflowTab === mod ? '#432177' : '#e6e6e9'}`,
+                          backgroundColor: activeWorkflowTab === mod ? '#432177' : '#ffffff',
+                          color: activeWorkflowTab === mod ? '#ffffff' : '#242424',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          fontSize: '13px'
+                        }}
+                      >
+                        {mod}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Workflow Pipeline Display */}
+                  <div className="card-enterprise" style={{ padding: '24px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #ededf0', paddingBottom: '12px' }}>
+                      <div>
+                        <span style={{ fontSize: '12px', fontWeight: '700', color: '#0f9d78', backgroundColor: '#d1fae8', padding: '3px 8px', borderRadius: '4px' }}>ACTIVE VERSION 2.4</span>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '8px 0 0 0' }}>{activeWorkflowTab} Approval Rule Matrix</h2>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#73767b' }}>
+                        SLA Escalation Timeout: <strong>48 Hours</strong> • Fallback Approver: <strong>Procurement Director</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', position: 'relative' }}>
+                      {/* Step 1 */}
+                      <div style={{ border: '2px solid #e6e6e9', borderRadius: '10px', padding: '18px', backgroundColor: '#faf9fc' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#432177', textTransform: 'uppercase' }}>STEP 1</span>
+                          <span style={{ fontSize: '11px', color: '#73767b' }}>SLA: 24h</span>
+                        </div>
+                        <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Department Head Review</h3>
+                        <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Validates departmental necessity and functional delivery deadline.</p>
+                        <div style={{ fontSize: '12px', backgroundColor: '#fff', border: '1px solid #e6e6e9', padding: '8px', borderRadius: '6px' }}>
+                          <div>Threshold: <strong>Up to $10,000.00</strong></div>
+                          <div>Role: <strong>Originating Dept Manager</strong></div>
+                        </div>
+                      </div>
+
+                      {/* Step 2 */}
+                      <div style={{ border: '2px solid #432177', borderRadius: '10px', padding: '18px', backgroundColor: '#ffffff', boxShadow: '0 4px 12px rgba(67, 33, 119, 0.08)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#432177', textTransform: 'uppercase' }}>STEP 2 (ACTIVE)</span>
+                          <span style={{ fontSize: '11px', color: '#b65c16', fontWeight: '700' }}>SLA: 48h</span>
+                        </div>
+                        <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Financial Controller Audit</h3>
+                        <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Verifies Cost Centre GL allocation and budget headroom check.</p>
+                        <div style={{ fontSize: '12px', backgroundColor: '#f0e5ff', border: '1px solid #d8b4fe', padding: '8px', borderRadius: '6px', color: '#432177' }}>
+                          <div>Threshold: <strong>$10,000.00 – $50,000.00</strong></div>
+                          <div>Role: <strong>David Chen (Finance Controller)</strong></div>
+                        </div>
+                      </div>
+
+                      {/* Step 3 */}
+                      <div style={{ border: '2px solid #e6e6e9', borderRadius: '10px', padding: '18px', backgroundColor: '#faf9fc' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#73767b', textTransform: 'uppercase' }}>STEP 3</span>
+                          <span style={{ fontSize: '11px', color: '#73767b' }}>SLA: 72h</span>
+                        </div>
+                        <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Executive / CFO Sign-off</h3>
+                        <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Dual executive authorization for capital commitments above threshold.</p>
+                        <div style={{ fontSize: '12px', backgroundColor: '#fff', border: '1px solid #e6e6e9', padding: '8px', borderRadius: '6px' }}>
+                          <div>Threshold: <strong>Exceeds $50,000.00</strong></div>
+                          <div>Role: <strong>Chief Financial Officer (CFO)</strong></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 14: ERP INTEGRATIONS (Image 13) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'integrations' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Enterprise ERP Connectors & Master Data</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Synchronize corporate ledger accounts, supplier master records, and issued purchase orders with SAP / Oracle</p>
+                    </div>
+                    <button
+                      onClick={handleTestErp}
+                      disabled={erpTesting}
+                      style={{ padding: '9px 18px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: erpTesting ? 'wait' : 'pointer' }}
+                    >
+                      {erpTesting ? 'Testing Handshake...' : '⚡ Test ERP Connection'}
+                    </button>
+                  </div>
+
+                  {erpTestResult && (
+                    <div style={{ padding: '14px 18px', backgroundColor: erpTestResult.status === 'success' ? '#d1fae8' : '#fce4e7', border: `1px solid ${erpTestResult.status === 'success' ? '#a7f3d0' : '#fecdd3'}`, borderRadius: '8px', marginBottom: '20px', fontSize: '13.5px', color: erpTestResult.status === 'success' ? '#0f9d78' : '#c32e3b' }}>
+                      <strong>{erpTestResult.status === 'success' ? '✓ Handshake Verified' : '✕ Connection Error'}:</strong> {erpTestResult.message} {erpTestResult.latency_ms && `(Latency: ${erpTestResult.latency_ms}ms)`}
+                    </div>
+                  )}
+
+                  {/* Primary Connection Card */}
+                  <div className="card-enterprise" style={{ padding: '24px', marginBottom: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '44px', height: '44px', borderRadius: '10px', backgroundColor: '#f0e5ff', color: '#432177', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+                          🔌
+                        </div>
+                        <div>
+                          <h2 style={{ fontSize: '17px', fontWeight: '700', margin: 0 }}>SAP S/4HANA Cloud (Production Gateway)</h2>
+                          <div style={{ fontSize: '12px', color: '#73767b', marginTop: '2px' }}>OData v4 REST Interface • Bidirectional Delta Synchronization</div>
+                        </div>
+                      </div>
+                      <StatusBadge status="Operational" />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', fontSize: '13px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px', padding: '16px' }}>
+                      <div>
+                        <div style={{ color: '#73767b', fontSize: '11px' }}>ENDPOINT URL</div>
+                        <div style={{ fontWeight: '600', marginTop: '3px' }} className="font-mono-numbers">https://api.s4hana.enterprise.corp</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#73767b', fontSize: '11px' }}>AUTHENTICATION</div>
+                        <div style={{ fontWeight: '600', marginTop: '3px' }}>OAuth 2.0 mTLS Certificate</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#73767b', fontSize: '11px' }}>SYNC FREQUENCY</div>
+                        <div style={{ fontWeight: '600', marginTop: '3px' }}>Real-time Webhook + 15m Poll</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#73767b', fontSize: '11px' }}>LAST AUDIT PULSE</div>
+                        <div style={{ fontWeight: '600', color: '#0f9d78', marginTop: '3px' }}>2026-11-03 15:45 UTC (200 OK)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Entity Mappings Table */}
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 12px 0' }}>Master Data Entity Synchronization Status</h3>
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Business Object</th>
+                          <th style={{ padding: '12px 18px' }}>ERP Table / BAPI</th>
+                          <th style={{ padding: '12px 18px' }}>Direction</th>
+                          <th style={{ padding: '12px 18px' }}>Synced Volume</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { obj: 'Supplier Master Entity', table: 'LFA1 / BusinessPartner_0001', dir: 'Bidirectional', count: '7 Records (100% Synced)', status: 'Synced' },
+                          { obj: 'Purchase Orders', table: 'EKKO / BAPI_PO_CREATE1', dir: 'Export to SAP', count: '3 POs Exported', status: 'Synced' },
+                          { obj: 'Invoices & 3-Way Match', table: 'RBKP / BAPI_INCOMINGINVOICE', dir: 'Import for Matching', count: '3 Invoices Verified', status: 'Synced' },
+                          { obj: 'Cost Centres & GL Ledgers', table: 'CSKS / FAGLFLEXT', dir: 'Import from SAP', count: '3 Ledgers ($800k Cap)', status: 'Synced' }
+                        ].map((m, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                            <td style={{ padding: '12px 18px', fontWeight: '600' }}>{m.obj}</td>
+                            <td style={{ padding: '12px 18px', color: '#73767b' }} className="font-mono-numbers">{m.table}</td>
+                            <td style={{ padding: '12px 18px' }}>{m.dir}</td>
+                            <td style={{ padding: '12px 18px', fontWeight: '600' }}>{m.count}</td>
+                            <td style={{ padding: '12px 18px' }}><StatusBadge status={m.status} /></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- ROUTE 15: AI MARKET INTELLIGENCE (Images 27, 28) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'admin' && currentRoute === 'ai-analysis' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>AI Market Intelligence & Negotiation Copilot</h1>
+                        <span style={{ backgroundColor: '#f0e5ff', color: '#432177', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '4px' }}>✨ Real-Time Copilot</span>
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Deep generative analysis comparing supplier quotes against enterprise baselines and regional market medians</p>
+                    </div>
+                    <button onClick={() => alert("Copied negotiation memo to clipboard!")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                      📋 Export Negotiation Brief
+                    </button>
+                  </div>
+
+                  {/* Benchmark Comparison Matrix */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+                    <div className="card-enterprise" style={{ padding: '18px' }}>
+                      <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>CURRENT SUPPLIER QUOTE</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#242424', marginTop: '6px' }} className="font-mono-numbers">$36,000.00</div>
+                      <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>Precision Components Ltd</div>
+                    </div>
+                    <div className="card-enterprise" style={{ padding: '18px' }}>
+                      <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>HISTORICAL PO BENCHMARK</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#432177', marginTop: '6px' }} className="font-mono-numbers">$33,200.00</div>
+                      <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>Based on FY25 Q3 batch</div>
+                    </div>
+                    <div className="card-enterprise" style={{ padding: '18px' }}>
+                      <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>REGIONAL MARKET MEDIAN</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#3676ce', marginTop: '6px' }} className="font-mono-numbers">$34,100.00</div>
+                      <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>US Central Industrial Index</div>
+                    </div>
+                    <div className="card-enterprise" style={{ padding: '18px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                      <div style={{ fontSize: '12px', color: '#166534', fontWeight: '700' }}>TARGET COUNTER-OFFER</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f9d78', marginTop: '6px' }} className="font-mono-numbers">$33,500.00</div>
+                      <div style={{ fontSize: '11.5px', color: '#166534', fontWeight: '600', marginTop: '4px' }}>Projected Savings: $2,500 (6.9%)</div>
+                    </div>
+                  </div>
+
+                  {/* Quality & Strategic Talking Points */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className="card-enterprise" style={{ padding: '22px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>Supplier Quality & Reliability Evaluation</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13.5px' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span>Technical IEEE Compliance</span>
+                            <strong style={{ color: '#0f9d78' }}>92.0%</strong>
+                          </div>
+                          <div style={{ height: '6px', backgroundColor: '#eee', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: '92%', height: '100%', backgroundColor: '#0f9d78' }} />
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <span>On-Time Fulfillment History</span>
+                            <strong style={{ color: '#0f9d78' }}>98.2%</strong>
+                          </div>
+                          <div style={{ height: '6px', backgroundColor: '#eee', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: '98.2%', height: '100%', backgroundColor: '#0f9d78' }} />
+                          </div>
+                        </div>
+                        <div style={{ padding: '10px 14px', backgroundColor: '#f0e5ff', borderRadius: '6px', color: '#432177', fontSize: '12.5px', fontWeight: '600' }}>
+                          ✓ 5-Year Full Replacement Warranty (Exceeds 3-Year RFP Requirement)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card-enterprise" style={{ padding: '22px' }}>
+                      <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>Strategic AI Negotiation Talking Points</h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px', lineHeight: '1.5' }}>
+                        <div style={{ padding: '10px 14px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px' }}>
+                          <strong>1. Multi-Year Volume Leverage:</strong> Highlight historical purchase volume across PR_00084 and pending Q1 datacenter demand to request an additional 4% unit discount.
+                        </div>
+                        <div style={{ padding: '10px 14px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px' }}>
+                          <strong>2. Competitive Distribution Baseline:</strong> Reference alternative tier-1 distributor quote offering $3,100.00 unit pricing with 48-hour delivery SLA.
+                        </div>
+                        <div style={{ padding: '10px 14px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px' }}>
+                          <strong>3. Payment Term Concession:</strong> Propose accelerated Net 15 settlement terms in exchange for waiving the initial warranty surcharge.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: DASHBOARD (Image 21) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-dashboard' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Buyer Portal — Supplier Workspace</h1>
+                        <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>PRECISION COMPONENTS LTD</span>
+                      </div>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Manage your invited quotations, customer purchase orders, and milestone invoices</p>
+                    </div>
+                    <button onClick={() => setCurrentRoute('registration-wizard')} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                      🚀 Onboarding Wizard (83% Done)
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '18px', marginBottom: '24px' }}>
+                    <MetricCard label="Pending Tenders" count={1} icon="🎯" color="#b65c16" onClick={() => setCurrentRoute('buyer-bids')} />
+                    <MetricCard label="Active Purchase Orders" count={1} icon="📋" color="#432177" onClick={() => setCurrentRoute('buyer-pos')} />
+                    <MetricCard label="Submitted Invoices" count={1} icon="💳" color="#3676ce" onClick={() => setCurrentRoute('buyer-invoices')} />
+                    <MetricCard label="Master Agreements" count={1} icon="📜" color="#0f9d78" onClick={() => setCurrentRoute('buyer-contracts')} />
+                  </div>
+
+                  <div className="card-enterprise" style={{ padding: '20px', borderLeft: '4px solid #432177', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700' }}>Active Tender: RFQ_2026_091</h3>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#555' }}>Cisco Managed Switch Procurement — Quote submission deadline in 3 days.</p>
+                    </div>
+                    <button onClick={() => setCurrentRoute('buyer-bids')} style={{ padding: '8px 18px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                      Review Quote Details →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: ONBOARDING WIZARD (Images 8, 9) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'registration-wizard' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Supplier Onboarding & Compliance Wizard</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Complete statutory verification, corporate disclosures, and banking details</p>
+                    </div>
+                    <button onClick={() => setCurrentRoute('buyer-dashboard')} style={{ padding: '6px 12px', border: '1px solid #e6e6e9', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>
+                      ← Back to Dashboard
+                    </button>
+                  </div>
+
+                  {/* 6 Step Navigation Bar */}
+                  <div className="card-enterprise" style={{ padding: '16px 20px', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {[
+                        { num: 1, label: 'Company Profile' },
+                        { num: 2, label: 'Operating Locations' },
+                        { num: 3, label: 'Key Signatories' },
+                        { num: 4, label: 'Tax & Compliance' },
+                        { num: 5, label: 'Banking & Remittance' },
+                        { num: 6, label: 'Final Review & Sign' }
+                      ].map((step) => {
+                        const isDone = wizardStep > step.num;
+                        const isCurrent = wizardStep === step.num;
+                        return (
+                          <div
+                            key={step.num}
+                            onClick={() => setWizardStep(step.num)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              cursor: 'pointer',
+                              color: isCurrent ? '#432177' : isDone ? '#0f9d78' : '#73767b',
+                              fontWeight: isCurrent ? '700' : '500',
+                              fontSize: '12.5px'
+                            }}
+                          >
+                            <span style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              backgroundColor: isCurrent ? '#432177' : isDone ? '#0f9d78' : '#e6e6e9',
+                              color: '#fff',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '11px',
+                              fontWeight: '700'
+                            }}>
+                              {isDone ? '✓' : step.num}
+                            </span>
+                            <span>{step.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Step Content */}
+                  <div className="card-enterprise" style={{ padding: '24px' }}>
+                    {wizardStep === 1 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 1: Company Legal Identity</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '13px' }}>
+                          <div><label style={{ color: '#73767b' }}>Legal Registered Name</label><input type="text" readOnly value="Precision Components Ltd" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Trading Name</label><input type="text" readOnly value="Precision Components" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Incorporation License Number</label><input type="text" readOnly value="US-MFG-99214-B" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Country of Domicile</label><input type="text" readOnly value="United States" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 2 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 2: Operational Locations & Shipping Hubs</h3>
+                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ padding: '12px', border: '1px solid #ededf0', borderRadius: '6px' }}>
+                            <strong>Primary Headquarters:</strong> 100 Innovation Parkway, Suite 400, Wilmington, DE 19801, USA
+                          </div>
+                          <div style={{ padding: '12px', border: '1px solid #ededf0', borderRadius: '6px' }}>
+                            <strong>Central Logistics Fulfillment Hub:</strong> 4200 Logistics Drive, Dallas, TX 75261, USA
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 3 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 3: Key Personnel & Authorized Signatories</h3>
+                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ padding: '12px', border: '1px solid #ededf0', borderRadius: '6px' }}>
+                            <div><strong>Elena Rostova</strong> — Director of Strategic Accounts</div>
+                            <div style={{ color: '#73767b' }}>Email: elena.rostova@precisioncomponents.com • Mobile: +1 (555) 234-8901</div>
+                            <span style={{ color: '#0f9d78', fontWeight: '600', fontSize: '12px' }}>✓ Authorized Signatory</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 4 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 4: Statutory Tax & Compliance Certifications</h3>
+                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', border: '1px solid #ededf0', borderRadius: '6px' }}>
+                            <div><strong>W-9 Federal Tax Certification:</strong> Signed for FY26 (Tax ID: 94-8821940)</div>
+                            <span style={{ color: '#0f9d78', fontWeight: '700' }}>✓ Verified</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', border: '1px solid #ededf0', borderRadius: '6px' }}>
+                            <div><strong>ISO 9001:2015 Quality Management:</strong> Valid through Dec 2028</div>
+                            <span style={{ color: '#0f9d78', fontWeight: '700' }}>✓ Verified</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 5 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 5: Banking & Remittance Settlement</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '13px' }}>
+                          <div><label style={{ color: '#73767b' }}>Settlement Financial Institution</label><input type="text" readOnly value="JPMorgan Chase Bank, N.A." style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>SWIFT / BIC Code</label><input type="text" readOnly value="CHASUS33XXX" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Account Number</label><input type="text" readOnly value="••••••••9942" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Settlement Currency</label><input type="text" readOnly value="USD" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {wizardStep === 6 && (
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>Step 6: Digital Signature & Final Compliance Review</h3>
+                        <div style={{ backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px', padding: '16px', fontSize: '13px', marginBottom: '16px' }}>
+                          I, <strong>Elena Rostova</strong>, hereby certify under penalty of perjury that all corporate filings, statutory tax records, and banking remittance instructions submitted herein are accurate and authorized.
+                        </div>
+                        <button onClick={() => { alert("Registration submitted for final compliance approval."); setCurrentRoute('buyer-dashboard'); }} style={{ padding: '10px 24px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                          ✓ Confirm & Submit Registration →
+                        </button>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', borderTop: '1px solid #ededf0', paddingTop: '16px' }}>
+                      <button disabled={wizardStep === 1} onClick={() => setWizardStep(wizardStep - 1)} style={{ padding: '8px 16px', border: '1px solid #e6e6e9', background: '#fff', borderRadius: '6px', cursor: wizardStep === 1 ? 'not-allowed' : 'pointer' }}>
+                        ← Previous Step
+                      </button>
+                      <button disabled={wizardStep === 6} onClick={() => setWizardStep(wizardStep + 1)} style={{ padding: '8px 20px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: wizardStep === 6 ? 'not-allowed' : 'pointer' }}>
+                        Next Step →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: TENDERS & QUOTES (Images 18, 22, 23) --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-bids' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Invited Sourcing Tenders</h1>
+                  <div className="card-enterprise" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700' }}>Tender RFQ_2026_091 — Quotation Schedule</h3>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#73767b' }}>Cisco Catalyst 9300 48-Port Switch Procurement (10 Units)</p>
+                      </div>
+                      <StatusBadge status="Under Evaluation" />
+                    </div>
+
+                    <div style={{ backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9', borderRadius: '8px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13.5px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#73767b' }}>Gross Total (10 units × $3,200.00):</span>
+                        <span className="font-mono-numbers">$32,000.00 USD</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f9d78' }}>
+                        <span>Unit Discount (10 units × $200.00):</span>
+                        <span className="font-mono-numbers">−$2,000.00 USD</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#73767b' }}>Taxable Base:</span>
+                        <span className="font-mono-numbers">$30,000.00 USD</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#73767b' }}>Standard Tax (20%):</span>
+                        <span className="font-mono-numbers">+$6,000.00 USD</span>
+                      </div>
+                      <div style={{ borderTop: '2px solid #e6e6e9', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#432177' }}>
+                        <span>Evaluated Net Quote:</span>
+                        <span className="font-mono-numbers">$36,000.00 USD</span>
+                      </div>
+                    </div>
+                    <button onClick={() => alert("Quotation submitted with receipt hash REC-88FA92C1!")} style={{ padding: '9px 24px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                      Sign & Submit Quotation →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: PURCHASE ORDERS RECEIVED --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-pos' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Customer Purchase Orders</h1>
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>PO Number</th>
+                          <th style={{ padding: '12px 18px' }}>Customer</th>
+                          <th style={{ padding: '12px 18px' }}>Delivery Target</th>
+                          <th style={{ padding: '12px 18px' }}>Receipt Status</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Net Order Value</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid #f1f1f4' }}>
+                          <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>PO_2026_0142</td>
+                          <td style={{ padding: '12px 18px', fontWeight: '500' }}>SellMyGoods Corp US</td>
+                          <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>2026-11-20</td>
+                          <td style={{ padding: '12px 18px' }}><StatusBadge status="Pending Receipt" /></td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$36,000.00 USD</td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                            <button onClick={() => alert("PO_2026_0142 acknowledged. Production schedule confirmed.")} style={{ padding: '5px 12px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                              Acknowledge PO
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: SUBMIT INVOICES --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-invoices' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div>
+                      <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Supplier Invoices & 3-Way Match Status</h1>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Track invoice matching, line verification, and remittance status</p>
+                    </div>
+                    <button onClick={() => alert("Create invoice against PO_2026_0142")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                      + Submit New Invoice
+                    </button>
+                  </div>
+
+                  <div className="card-enterprise" style={{ overflow: 'hidden', marginBottom: '24px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Invoice Number</th>
+                          <th style={{ padding: '12px 18px' }}>PO Reference</th>
+                          <th style={{ padding: '12px 18px' }}>Invoice Date</th>
+                          <th style={{ padding: '12px 18px' }}>Due Date</th>
+                          <th style={{ padding: '12px 18px' }}>Match Verification</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Total Amount</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid #f1f1f4' }}>
+                          <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>INV_99214</td>
+                          <td style={{ padding: '12px 18px', fontWeight: '500' }}>PO_2026_0142</td>
+                          <td style={{ padding: '12px 18px' }}>2026-11-03</td>
+                          <td style={{ padding: '12px 18px' }}>2026-12-03</td>
+                          <td style={{ padding: '12px 18px' }}>
+                            <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>✓ 3-Way Matched</span>
+                          </td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$36,000.00 USD</td>
+                          <td style={{ padding: '12px 18px' }}><StatusBadge status="Pending Approval" /></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: MASTER CONTRACTS --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-contracts' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Executed Customer Supply Agreements</h1>
+                  <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+                        <tr>
+                          <th style={{ padding: '12px 18px' }}>Contract #</th>
+                          <th style={{ padding: '12px 18px' }}>Title</th>
+                          <th style={{ padding: '12px 18px' }}>Customer</th>
+                          <th style={{ padding: '12px 18px' }}>Agreement Term</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Agreed Ceiling Value</th>
+                          <th style={{ padding: '12px 18px' }}>Status</th>
+                          <th style={{ padding: '12px 18px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid #f1f1f4' }}>
+                          <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>CTR_2026_004</td>
+                          <td style={{ padding: '12px 18px', fontWeight: '600' }}>Enterprise Master IT Equipment & Maintenance Agreement</td>
+                          <td style={{ padding: '12px 18px' }}>SellMyGoods Corp US</td>
+                          <td style={{ padding: '12px 18px' }}>2026-01-01 to 2028-12-31</td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$250,000.00 USD</td>
+                          <td style={{ padding: '12px 18px' }}><StatusBadge status="Active" /></td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right' }}>
+                            <button onClick={() => alert("Downloading executed PDF agreement...")} style={{ padding: '5px 12px', border: '1px solid #432177', color: '#432177', background: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
+                              Download PDF
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ======================================================== */}
+              {/* --- BUYER PORTAL: LIVE AUCTION CONSOLE --- */}
+              {/* ======================================================== */}
+              {activePortal === 'buyer' && currentRoute === 'buyer-auctions' && (
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 20px 0' }}>Live Dynamic Auction Bidding Terminal</h1>
+                  <div className="card-enterprise" style={{ padding: '24px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+                      <div>
+                        <span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>AUC_2026_011</span>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '6px 0 0 0' }}>Surplus Automated Factory Machining Center & Robotic Arms</h2>
+                      </div>
+                      <StatusBadge status="Live" />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#73767b' }}>CURRENT BEST BID</div>
+                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#432177', marginTop: '4px' }} className="font-mono-numbers">${buyerBestBid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#73767b' }}>YOUR CURRENT RANK</div>
+                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#0f9d78', marginTop: '4px' }}>#1 (Leading)</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#73767b' }}>TIME REMAINING</div>
+                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#b65c16', marginTop: '4px' }} className="font-mono-numbers">01h : 42m : 18s</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <input
+                        type="number"
+                        step="500"
+                        value={myNewBidInput}
+                        onChange={(e) => setMyNewBidInput(Number(e.target.value))}
+                        style={{ padding: '10px 14px', borderRadius: '6px', border: '1px solid #e6e6e9', fontSize: '16px', fontWeight: '700', width: '220px' }}
+                      />
+                      <button
+                        onClick={() => {
+                          setBuyerBestBid(myNewBidInput);
+                          setMyNewBidInput(myNewBidInput - 500);
+                          alert(`Competitive bid of $${myNewBidInput.toLocaleString()} submitted and registered on live auction ledger!`);
+                        }}
+                        style={{ padding: '10px 24px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}
+                      >
+                        ⚡ Submit Competitive Bid →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </main>
+
+            {/* FOOTER */}
+            <footer style={{ height: '42px', backgroundColor: '#ffffff', borderTop: '1px solid #e6e6e9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', fontSize: '12px', color: '#73767b' }}>
+              <div>© 2026 SellMyGoods Enterprise Procurement • SOC-2 Type II Certified</div>
+              <div>Authenticated: <strong>2026-11-03 UTC</strong></div>
+            </footer>
+          </div>
+
+          {/* COMPARE BIDS MODAL (Images 15 & 16) */}
+          {isCompareOpen && comparisonData && (
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(3px)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+              <div style={{ backgroundColor: '#fff', borderRadius: '14px', width: '95%', maxWidth: '1100px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '18px 24px', borderBottom: '1px solid #e6e6e9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: '#242424' }}>
+                    Bid Comparison Matrix — {comparisonData.event_code}
+                  </h2>
+                  <button onClick={() => setIsCompareOpen(false)} style={{ background: '#f3f4f6', border: 'none', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontWeight: '700' }}>
+                    ✕ Close
+                  </button>
+                </div>
+
+                <div style={{ padding: '24px', overflowY: 'auto' }}>
+                  <div style={{ backgroundColor: '#f0e5ff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '12.5px', color: '#432177' }}>
+                    💡 <strong>Section I1 Verified Financials:</strong> 10 units × $3,200 ($32k gross) − $2k discount + $6k tax = <strong>$36,000.00 Net</strong>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${comparisonData.suppliers.length}, 1fr)`, gap: '20px', marginBottom: '24px' }}>
+                    {comparisonData.suppliers.map((s, idx) => (
+                      <div key={idx} style={{ border: '1px solid #e6e6e9', borderRadius: '10px', padding: '18px', backgroundColor: idx === 0 ? '#faf9fc' : '#ffffff' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                          <strong style={{ fontSize: '15px' }}>{s.supplier_name}</strong>
+                          {idx === 0 && <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: '700' }}>Best Value</span>}
+                        </div>
+                        <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div>Gross: <span className="font-mono-numbers">${s.gross_amount?.toLocaleString()}</span></div>
+                          <div style={{ color: '#0f9d78' }}>Discount: <span className="font-mono-numbers">−${s.discount_amount?.toLocaleString()}</span></div>
+                          <div>Tax (20%): <span className="font-mono-numbers">+${s.tax_amount?.toLocaleString()}</span></div>
+                          <div style={{ fontWeight: '700', fontSize: '16px', color: '#432177', borderTop: '1px solid #eee', paddingTop: '6px' }}>
+                            Net: <span className="font-mono-numbers">${s.net_quote?.toLocaleString()}</span>
+                          </div>
+                          <div>Technical Score: <strong>{s.technical_score}%</strong></div>
+                          <div>Composite Total: <strong>{s.total_score} pts</strong></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                    <button onClick={() => setIsCompareOpen(false)} style={{ padding: '8px 16px', border: '1px solid #e6e6e9', background: '#fff', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={() => handleAward(comparisonData.suppliers[0]?.supplier_id || 1)} style={{ padding: '8px 24px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+                      Confirm Award & Generate PO →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FLOATING PURPLE 56px AI ASSISTANT LAUNCHER */}
+          <button
+            onClick={() => setIsAiOpen(!isAiOpen)}
+            style={{ position: 'fixed', bottom: '60px', right: '24px', width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#432177', color: '#ffffff', border: 'none', boxShadow: '0 4px 14px rgba(67, 33, 119, 0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, fontSize: '24px' }}
+            title="SellMyGoods AI Assistant"
+          >
+            ✨
+          </button>
+
+          {isAiOpen && (
+            <div style={{ position: 'fixed', bottom: '126px', right: '24px', width: '400px', backgroundColor: '#fff', borderRadius: '16px', border: '1px solid #e6e6e9', boxShadow: '0 12px 35px rgba(0,0,0,0.15)', zIndex: 60, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', backgroundColor: '#432177', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '15px' }}>SellMyGoods AI Assistant</strong>
+                <button onClick={() => setIsAiOpen(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px' }}>✕</button>
+              </div>
+              <div style={{ padding: '16px', fontSize: '13px' }}>
+                <div style={{ fontWeight: '600', marginBottom: '8px', color: '#432177' }}>Market Intelligence Benchmark</div>
+                <p style={{ margin: '0 0 10px 0', color: '#555', lineHeight: '1.5' }}>
+                  Precision Components Ltd quote of $36,000 for 10 switches is aligned within 3% of median enterprise contract baselines. Recommended counter-offer: $33,500 based on Q4 commitments.
+                </p>
+                <div style={{ padding: '8px 12px', backgroundColor: '#f0e5ff', borderRadius: '6px', color: '#432177', fontWeight: '600', fontSize: '12px' }}>
+                  ✓ 5-Year Replacement Warranty Validated
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

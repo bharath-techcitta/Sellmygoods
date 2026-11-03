@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-sidebar: #2e1857;
+  --brand-primary: #432177;
+  --brand-hover: #512d88;
+  --brand-selected: #482a73;
+  --page-bg: #f7f7f8;
+  --surface: #ffffff;
+  --text: #242424;
+  --text-muted: #73767b;
+  --border: #e6e6e9;
+  --success: #0f9d78;
+  --success-bg: #d1fae8;
+  --warning: #b65c16;
+  --warning-bg: #fff0d8;
+  --danger: #c32e3b;
+  --danger-bg: #fce4e7;
+  --info: #3676ce;
+  --info-bg: #deebff;
+  --purple-bg: #f0e5ff;
+  --radius-card: 13px;
+  --radius-control: 6px;
+  --sidebar-width: 242px;
+  --header-height: 58px;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--page-bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Utilities for Enterprise Density matching screenshots */
+.font-mono-numbers {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-enterprise {
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.btn-primary {
+  background-color: var(--brand-primary);
+  color: #ffffff;
+  font-weight: 500;
+  border-radius: var(--radius-control);
+  transition: all 0.15s ease-in-out;
+}
+.btn-primary:hover {
+  background-color: var(--brand-hover);
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  color: #242424;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  transition: all 0.15s ease-in-out;
+}
+.btn-secondary:hover {
+  background-color: #f7f7f8;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
