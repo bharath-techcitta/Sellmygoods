@@ -1,0 +1,1 @@
+# SellMyGoods FastAPI backend package

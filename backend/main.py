@@ -112,6 +112,13 @@ def switch_role(req: RoleSwitchRequest):
         active_session["avatar_initials"] = "MV"
     return {"status": "success", "user": active_session}
 
+
+@app.get("/api/v1/health")
+def health_check():
+    """Lightweight probe for Render / uptime checks (no DB round-trip)."""
+    return {"status": "ok", "service": "sellmygoods-api"}
+
+
 # ----------------- DASHBOARD & METRICS -----------------
 
 @app.get("/api/v1/dashboard/metrics")

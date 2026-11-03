@@ -3,18 +3,168 @@ from .database import engine, Base, SessionLocal
 from .models import (
     User, Category, Item, Supplier, SupplierContact, SupplierBank, SupplierDoc,
     Requisition, RequisitionLine, SourcingEvent, BidResponse, BidLine,
-    PurchaseOrder, POLine, Invoice, Contract, Clause, Auction, Budget,
+    PurchaseOrder, POLine, GoodsReceipt, Invoice, Contract, Clause, Auction, Budget,
     ApprovalWorkflow, ApprovalTask
 )
 from .calculations import calculate_quote_line, calculate_composite_score
 
-def seed_database():
+
+def ensure_supplemental_data(db) -> None:
+    """Idempotent extras so detail pages (PR/PO) are never empty after seed."""
+    pr2 = db.query(Requisition).filter(Requisition.pr_number == "PR_00085").first()
+    if pr2 and not db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr2.id).first():
+        item3 = db.query(Item).filter(Item.sku == "IND-VLV-22").first()
+        db.add(
+            RequisitionLine(
+                requisition_id=pr2.id,
+                line_number=1,
+                item_id=item3.id if item3 else None,
+                description="Stainless Steel Industrial Flanged Ball Valve 2\"",
+                category="Industrial Machinery & Tools",
+                quantity=50.0,
+                uom="Piece",
+                unit_price=310.0,
+                amount=15500.0,
+                status="Pending Approval",
+            )
+        )
+
+    pr3 = db.query(Requisition).filter(Requisition.pr_number == "PR_00086").first()
+    if pr3 and not db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr3.id).first():
+        item2 = db.query(Item).filter(Item.sku == "IT-NB-001").first()
+        db.add(
+            RequisitionLine(
+                requisition_id=pr3.id,
+                line_number=1,
+                item_id=item2.id if item2 else None,
+                description="Dell XPS Developer Workstation 32GB",
+                category="Computing & Laptops",
+                quantity=10.0,
+                uom="Unit",
+                unit_price=1850.0,
+                amount=18500.0,
+                status="Draft",
+            )
+        )
+
+    po2 = db.query(PurchaseOrder).filter(PurchaseOrder.po_number == "PO_2026_0143").first()
+    if po2 and not db.query(POLine).filter(POLine.po_id == po2.id).first():
+        db.add(
+            POLine(
+                po_id=po2.id,
+                line_number=1,
+                description="Regional freight forwarding — Q4 master lot",
+                ordered_qty=1.0,
+                received_qty=1.0,
+                accepted_qty=1.0,
+                rejected_qty=0.0,
+                uom="Lot",
+                unit_price=22000.0,
+                net_amount=24500.0,
+            )
+        )
+
+    po3 = db.query(PurchaseOrder).filter(PurchaseOrder.po_number == "PO_2026_0144").first()
+    if po3 and not db.query(POLine).filter(POLine.po_id == po3.id).first():
+        db.add(
+            POLine(
+                po_id=po3.id,
+                line_number=1,
+                description="Precision machining tooling kit — Plant Unit 4",
+                ordered_qty=1.0,
+                received_qty=1.0,
+                accepted_qty=1.0,
+                rejected_qty=0.0,
+                uom="Kit",
+                unit_price=11000.0,
+                net_amount=12800.0,
+            )
+        )
+
+    if po2 and not db.query(GoodsReceipt).filter(GoodsReceipt.po_id == po2.id).first():
+        db.add(
+            GoodsReceipt(
+                receipt_number="GRN_2026_0143",
+                po_id=po2.id,
+                receiver_name="Marcus Vance",
+                accepted_qty=1.0,
+                rejected_qty=0.0,
+                status="Accepted",
+                inspection_notes="Freight services milestone sign-off completed.",
+            )
+        )
+
+    if po3 and not db.query(GoodsReceipt).filter(GoodsReceipt.po_id == po3.id).first():
+        db.add(
+            GoodsReceipt(
+                receipt_number="GRN_2026_0144",
+                po_id=po3.id,
+                receiver_name="Sarah Jenkins",
+                accepted_qty=1.0,
+                rejected_qty=0.0,
+                status="Accepted",
+                inspection_notes="Tooling kit passed incoming QA inspection.",
+            )
+        )
+
+    if not db.query(ApprovalWorkflow).filter(ApprovalWorkflow.module == "Purchase Order").first():
+        db.add(
+            ApprovalWorkflow(
+                module="Purchase Order",
+                name="Standard PO Commitment Approval",
+                is_active=True,
+                steps_count=2,
+                definition=[
+                    {"step": 1, "title": "Buyer Manager Review", "approver_role": "Procurement Lead", "sla_hours": 24, "condition": "All POs"},
+                    {"step": 2, "title": "Finance Budget Commitment", "approver_role": "Finance Controller", "sla_hours": 48, "condition": "Net Amount >= $25,000"},
+                ],
+            )
+        )
+
+    if not db.query(ApprovalWorkflow).filter(ApprovalWorkflow.module == "Invoice").first():
+        db.add(
+            ApprovalWorkflow(
+                module="Invoice",
+                name="3-Way Match Invoice Approval",
+                is_active=True,
+                steps_count=2,
+                definition=[
+                    {"step": 1, "title": "AP 3-Way Match Validation", "approver_role": "AP Analyst", "sla_hours": 24, "condition": "All Invoices"},
+                    {"step": 2, "title": "AP Lead Payment Release", "approver_role": "AP Lead", "sla_hours": 48, "condition": "Match exceptions or amount >= $10,000"},
+                ],
+            )
+        )
+
+    db.commit()
+
+
+def _reset_postgres_schema() -> None:
+    """Fast reset for Neon/Render PostgreSQL (avoids slow drop_all on pooler)."""
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        autocommit = conn.execution_options(isolation_level="AUTOCOMMIT")
+        autocommit.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+        autocommit.execute(text("CREATE SCHEMA public"))
+        autocommit.execute(text("GRANT ALL ON SCHEMA public TO PUBLIC"))
+
+
+def seed_database(force: bool = False):
+    if force:
+        print("Force mode: resetting database schema...")
+        if str(engine.url).startswith("postgresql"):
+            _reset_postgres_schema()
+        else:
+            Base.metadata.drop_all(bind=engine)
+
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     # Check if already seeded
     if db.query(Supplier).first():
+        ensure_supplemental_data(db)
         db.close()
+        print("Database already seeded; supplemental demo data ensured.")
         return
 
     print("Seeding SellMyGoods database...")
@@ -623,8 +773,18 @@ def seed_database():
     db.add_all(tasks)
 
     db.commit()
+    ensure_supplemental_data(db)
     db.close()
     print("Database seeding completed successfully.")
 
 if __name__ == "__main__":
-    seed_database()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Seed SellMyGoods demo data (Neon / local).")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Drop all tables and reseed (use on empty or broken Neon DB).",
+    )
+    args = parser.parse_args()
+    seed_database(force=args.force)
