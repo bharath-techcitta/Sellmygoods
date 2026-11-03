@@ -68,7 +68,7 @@ export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
               </span>
             </div>
             <div style={{ fontSize: '13px', color: '#73767b', marginTop: '2px' }}>
-              Buyer: Marcus Vance • Entity: SellMyGoods Corp US • Destination: Central Logistics Hub, Dallas TX
+              Buyer: Marcus Vance • Entity: Procurio Corp US • Destination: Central Logistics Hub, Dallas TX
             </div>
           </div>
         </div>

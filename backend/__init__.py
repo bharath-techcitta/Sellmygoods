@@ -1,1 +1,1 @@
-# SellMyGoods FastAPI backend package
+# Procurio FastAPI backend package

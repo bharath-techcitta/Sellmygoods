@@ -29,7 +29,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!termsAccepted) {
-      alert("Please review and accept the SellMyGoods Supplier Code of Conduct and Commercial Terms.");
+      alert("Please review and accept the Procurio Supplier Code of Conduct and Commercial Terms.");
       return;
     }
     const receiptId = "REC-" + Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -319,7 +319,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
                     style={{ marginTop: '3px', accentColor: '#432177' }}
                   />
                   <span>
-                    I confirm that the statutory details and banking credentials provided are authentic and binding. I acknowledge the <strong>SellMyGoods Corporate Supplier Governance Code</strong>.
+                    I confirm that the statutory details and banking credentials provided are authentic and binding. I acknowledge the <strong>Procurio Corporate Supplier Governance Code</strong>.
                   </span>
                 </label>
               </div>

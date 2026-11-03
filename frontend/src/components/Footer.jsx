@@ -16,7 +16,7 @@ export default function Footer() {
       }}
     >
       <div style={{ display: 'flex', gap: '16px' }}>
-        <span>© 2026 SellMyGoods Enterprise Procurement</span>
+        <span>© 2026 Procurio Enterprise Procurement</span>
         <span>•</span>
         <a href="#privacy" style={{ color: '#73767b', textDecoration: 'none' }}>Security & Compliance</a>
         <span>•</span>

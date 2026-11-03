@@ -1,4 +1,4 @@
-# SellMyGoods — Enterprise Procurement & Supplier Collaboration Platform
+# Procurio — Enterprise Procurement & Supplier Collaboration Platform
 
 A dual-portal enterprise procurement web application built strictly to the specifications in `Run it.md` and the 30 screenshot references.
 
@@ -7,7 +7,7 @@ A dual-portal enterprise procurement web application built strictly to the speci
 ## Architecture Overview
 
 ```
-SellMyGoods/
+Procurio/
 ├── backend/                  # Python FastAPI Backend
 │   ├── database.py           # SQLAlchemy SQLite connection engine
 │   ├── models.py             # 13-Module Relational Schema (Appendix §15.3, Section G2)

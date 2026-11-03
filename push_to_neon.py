@@ -37,7 +37,7 @@ def _mask_url(url: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Seed Neon DB from SellMyGoods demo dataset.")
+    parser = argparse.ArgumentParser(description="Seed Neon DB from Procurio demo dataset.")
     parser.add_argument(
         "--force",
         action="store_true",

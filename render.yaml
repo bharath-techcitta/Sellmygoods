@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sellmygoods-backend
+    name: procurio-backend
     runtime: python
     region: oregon
     plan: free

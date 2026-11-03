@@ -1,8 +1,9 @@
 import os
 import datetime
 import hashlib
+from contextvars import ContextVar
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, Query, Body
+from fastapi import FastAPI, Depends, HTTPException, Query, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -21,8 +22,8 @@ from .calculations import calculate_quote_line, calculate_budget_balance, calcul
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="SellMyGoods Enterprise Procurement API",
-    description="Backend API for SellMyGoods Dual-Portal Procurement Application",
+    title="Procurio Enterprise Procurement API",
+    description="Backend API for Procurio Dual-Portal Procurement Application",
     version="1.0.0"
 )
 
@@ -33,13 +34,95 @@ if allowed_origins_env == "*":
 else:
     origins = [orig.strip() for orig in allowed_origins_env.split(",") if orig.strip()]
 
+# Browsers reject credentials + Allow-Origin: * — breaks cross-origin POST/preflight from Vercel.
+_use_wildcard_cors = origins == ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=not _use_wildcard_cors,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Demo-Role",
+        "X-Demo-Portal",
+        "X-Demo-Supplier-Id",
+    ],
+    expose_headers=["*"],
 )
+
+_request_session: ContextVar[Optional[dict]] = ContextVar("_request_session", default=None)
+
+ALLOWED_SWITCH_ROLES = frozenset({"procurement_buyer", "supplier_user"})
+
+# In-memory fallback when demo headers are not sent (local single-process dev)
+active_session = {
+    "user_id": 1,
+    "email": "marcus.vance@procurio.com",
+    "full_name": "Marcus Vance",
+    "role": "procurement_buyer",
+    "portal": "admin",
+    "supplier_id": None,
+    "avatar_initials": "MV",
+}
+
+
+def build_demo_session(role: str, portal: str, supplier_id: Optional[int] = None) -> dict:
+    if role == "supplier_user":
+        return {
+            "user_id": 2,
+            "email": "elena.rostova@precisioncomponents.com",
+            "full_name": "Elena Rostova",
+            "role": "supplier_user",
+            "portal": "buyer",
+            "supplier_id": supplier_id or 1,
+            "avatar_initials": "ER",
+        }
+    return {
+        "user_id": 1,
+        "email": "marcus.vance@procurio.com",
+        "full_name": "Marcus Vance",
+        "role": "procurement_buyer",
+        "portal": "admin",
+        "supplier_id": None,
+        "avatar_initials": "MV",
+    }
+
+
+def get_demo_session() -> dict:
+    ctx = _request_session.get()
+    if ctx is not None:
+        return ctx
+    return active_session
+
+
+def apply_demo_session(role: str, portal: str, supplier_id: Optional[int] = None) -> dict:
+    session = build_demo_session(role, portal, supplier_id)
+    active_session.clear()
+    active_session.update(session)
+    return session
+
+
+@app.middleware("http")
+async def attach_demo_session(request: Request, call_next):
+    role = request.headers.get("x-demo-role")
+    portal = request.headers.get("x-demo-portal")
+    sup_raw = request.headers.get("x-demo-supplier-id")
+    sup_id: Optional[int] = None
+    if sup_raw and str(sup_raw).isdigit():
+        sup_id = int(sup_raw)
+
+    if role in ALLOWED_SWITCH_ROLES and portal in ("admin", "buyer"):
+        session = build_demo_session(role, portal, sup_id)
+    else:
+        session = dict(active_session)
+
+    token = _request_session.set(session)
+    try:
+        return await call_next(request)
+    finally:
+        _request_session.reset(token)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -50,25 +133,13 @@ def on_startup():
     except Exception as e:
         print(f"Startup notice: {e}")
 
-# In-memory active user state for session / role switching
-active_session = {
-    "user_id": 1,
-    "email": "marcus.vance@sellmygoods.com",
-    "full_name": "Marcus Vance",
-    "role": "procurement_buyer",
-    "portal": "admin", # "admin" or "buyer"
-    "supplier_id": None,
-    "avatar_initials": "MV"
-}
-
-ALLOWED_SWITCH_ROLES = frozenset({"procurement_buyer", "supplier_user"})
-
 # ----------------- AUTH & SESSION -----------------
 
 @app.get("/api/v1/auth/me")
 def get_current_user():
+    user = get_demo_session()
     return {
-        "user": active_session,
+        "user": user,
         "available_portals": [
             {"id": "admin", "title": "Admin Portal", "context": "Internal Procurement Workspace"},
             {"id": "buyer", "title": "Buyer Portal", "context": "Supplier Workspace"}
@@ -89,27 +160,14 @@ def switch_role(req: RoleSwitchRequest):
     if req.role not in ALLOWED_SWITCH_ROLES:
         raise HTTPException(status_code=400, detail="Only procurement buyer and supplier user roles are enabled in this demo.")
 
-    active_session["role"] = req.role
-    active_session["portal"] = req.portal
-    if req.role == "supplier_user":
-        active_session["full_name"] = "Elena Rostova"
-        active_session["email"] = "elena.rostova@precisioncomponents.com"
-        active_session["avatar_initials"] = "ER"
-        active_session["supplier_id"] = req.supplier_id or 1
-        active_session["user_id"] = 2
-    else:
-        active_session["full_name"] = "Marcus Vance"
-        active_session["email"] = "marcus.vance@sellmygoods.com"
-        active_session["avatar_initials"] = "MV"
-        active_session["supplier_id"] = None
-        active_session["user_id"] = 1
-    return {"status": "success", "user": active_session}
+    user = apply_demo_session(req.role, req.portal, req.supplier_id)
+    return {"status": "success", "user": user}
 
 
 @app.get("/api/v1/health")
 def health_check():
     """Lightweight probe for Render / uptime checks (no DB round-trip)."""
-    return {"status": "ok", "service": "sellmygoods-api"}
+    return {"status": "ok", "service": "procurio-api"}
 
 
 # ----------------- DASHBOARD & METRICS -----------------
@@ -247,7 +305,7 @@ def invite_supplier(req: InviteSupplierRequest, db: Session = Depends(get_db)):
         country=req.country,
         email=req.contact_email,
         contact_no="+1 (555) 000-0000",
-        created_by=active_session["full_name"],
+        created_by=get_demo_session()["full_name"],
         current_approver="Compliance Reviewer"
     )
     db.add(new_sup)
@@ -370,8 +428,8 @@ def create_requisition(req: CreatePRRequest, db: Session = Depends(get_db)):
         description=req.description,
         pr_type="Goods",
         status="Draft",
-        requester_name=active_session["full_name"],
-        requester_email=active_session["email"],
+        requester_name=get_demo_session()["full_name"],
+        requester_email=get_demo_session()["email"],
         buyer_name="Marcus Vance",
         department=req.department,
         total_amount=total,
@@ -446,7 +504,7 @@ def convert_requisition(id: int, req: ConvertPRRequest, db: Session = Depends(ge
             close_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
             currency=pr.currency,
             delivery_location=pr.destination,
-            buyer_name=active_session["full_name"],
+            buyer_name=get_demo_session()["full_name"],
             requester_name=pr.requester_name,
             department=pr.department,
             linked_pr_number=pr.pr_number,
@@ -466,7 +524,7 @@ def convert_requisition(id: int, req: ConvertPRRequest, db: Session = Depends(ge
             status="Issued",
             approval_status="Approved",
             delivery_date=pr.delivery_date,
-            buyer_name=active_session["full_name"],
+            buyer_name=get_demo_session()["full_name"],
             department=pr.department,
             gross_amount=pr.total_amount,
             tax_amount=pr.total_amount * 0.2,
@@ -626,7 +684,7 @@ def get_supplier_events(db: Session = Depends(get_db)):
     for e in events:
         resp = db.query(BidResponse).filter(
             BidResponse.event_id == e.id,
-            BidResponse.supplier_id == active_session.get("supplier_id", 1)
+            BidResponse.supplier_id == get_demo_session().get("supplier_id", 1)
         ).first()
         items.append({
             "id": e.id,
@@ -668,7 +726,7 @@ def submit_bid_response(req: SubmitBidResponseRequest, db: Session = Depends(get
         is_tax_inclusive=req.is_tax_inclusive
     )
 
-    sup_id = active_session.get("supplier_id", 1)
+    sup_id = get_demo_session().get("supplier_id", 1)
     sup = db.query(Supplier).filter(Supplier.id == sup_id).first()
     
     resp_code = f"RSP_{req.event_id}_{sup.code if sup else 'SUP'}"
@@ -764,7 +822,7 @@ def receive_po_goods(id: int, req: ReceiveGoodsRequest, db: Session = Depends(ge
     receipt = GoodsReceipt(
         receipt_number=rcpt_num,
         po_id=id,
-        receiver_name=active_session["full_name"],
+        receiver_name=get_demo_session()["full_name"],
         accepted_qty=req.accepted_qty,
         rejected_qty=req.rejected_qty,
         status="Accepted",
@@ -880,7 +938,7 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
             raise HTTPException(status_code=400, detail=f"Bid must be higher than current best: ${auc.current_best_bid:,.2f}")
 
     auc.current_best_bid = req.bid_amount
-    auc.best_bidder_id = active_session.get("supplier_id") or 1
+    auc.best_bidder_id = get_demo_session().get("supplier_id") or 1
     auc.total_bids_placed += 1
     if auc.status == "Scheduled":
         auc.status = "Live"
@@ -1063,4 +1121,4 @@ def serve_spa(full_path: str):
     index_file = os.path.join(static_dir, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
-    return {"message": "SellMyGoods API is active. React frontend is building..."}
+    return {"message": "Procurio API is active. React frontend is building..."}

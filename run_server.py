@@ -1,5 +1,5 @@
 """
-SellMyGoods — Enterprise Procurement & Supplier Collaboration
+Procurio — Enterprise Procurement & Supplier Collaboration
 Entry point launcher. Runs FastAPI backend and serves the React frontend.
 """
 import uvicorn
@@ -13,7 +13,7 @@ from backend.seed import seed_database
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("  SellMyGoods — Enterprise Procurement & Supplier Collaboration")
+    print("  Procurio — Enterprise Procurement & Supplier Collaboration")
     print("  Dual-Portal Platform: Admin Portal + Buyer Portal")
     print("=" * 70)
     
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     seed_database()
     
     # 2. Start Uvicorn Server
-    print("\nStarting SellMyGoods server on http://localhost:8000")
+    print("\nStarting Procurio server on http://localhost:8000")
     print("Open http://localhost:8000 in your browser to access the application.\n")
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=False)
 

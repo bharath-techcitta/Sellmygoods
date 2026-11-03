@@ -1,4 +1,4 @@
-# SellMyGoods — Production Deployment Guide
+# Procurio — Production Deployment Guide
 ## Complete Stack: Neon DB (PostgreSQL) + Render (FastAPI) + Vercel (React Vite)
 
 ---
@@ -80,7 +80,7 @@ git push -u origin main
 2. Click **New +** $\rightarrow$ **Web Service**.
 3. Select **Build and deploy from a Git repository** and connect your `sellmygoods` repository.
 4. Fill in the service configuration:
-   - **Name:** `sellmygoods-backend` (or your preferred name)
+   - **Name:** `procurio-backend` (or your preferred name)
    - **Region:** Same region as your Neon DB (e.g., `Oregon` or `Ohio`)
    - **Branch:** `main`
    - **Root Directory:** *(leave blank for root)*
@@ -102,8 +102,8 @@ git push -u origin main
    | `PYTHON_VERSION` | `3.11.9` | |
 6. Click **Create Web Service**.
 7. Render will build the dependencies, launch Uvicorn, connect to Neon DB, and **automatically run database migrations and seed all sample data** on first startup!
-8. Copy your Render service URL once deployment completes (e.g., `https://sellmygoods-backend.onrender.com`).
-   - Test it by visiting `https://sellmygoods-backend.onrender.com/api/v1/auth/me` or `/docs` (Swagger UI).
+8. Copy your Render service URL once deployment completes (e.g., `https://procurio-backend.onrender.com`).
+   - Test it by visiting `https://procurio-backend.onrender.com/api/v1/auth/me` or `/docs` (Swagger UI).
 
 ---
 

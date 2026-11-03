@@ -8,7 +8,7 @@ const defaultBuyerOrders = [
       id: 1,
       po_number: 'PO_2026_0142',
       status: 'Issued',
-      entity_name: 'SellMyGoods Corp US',
+      entity_name: 'Procurio Corp US',
       delivery_date: '2026-11-20',
       payment_terms: 'Net 30 Days',
       net_amount: 36000.0,

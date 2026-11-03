@@ -1,17 +1,37 @@
+import { demoSessionHeaders } from './demoSession';
+
 const isLocalDev =
   typeof window !== 'undefined' &&
   /localhost:3000|localhost:5173|127\.0\.0\.1:3000|127\.0\.0\.1:5173/.test(window.location.origin);
 
+function normalizeApiBase(url) {
+  if (!url || typeof url !== 'string') return url;
+  let base = url.trim().replace(/\/+$/, '');
+  if (base.endsWith('/api/v1')) return base;
+  if (base.endsWith('/api')) return `${base}/v1`;
+  return `${base}/api/v1`;
+}
+
+const envApiUrl = normalizeApiBase(
+  import.meta.env?.VITE_API_URL || (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL)
+);
+
 const BASE_URL =
-  import.meta.env?.VITE_API_URL ||
-  (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL) ||
+  envApiUrl ||
   (isLocalDev ? 'http://localhost:8000/api/v1' : '/api/v1');
+
+if (typeof window !== 'undefined' && !envApiUrl && !isLocalDev) {
+  console.warn(
+    '[Procurio] VITE_API_URL is not set on Vercel. Role switch and API calls will fail unless you point the frontend at your Render backend.'
+  );
+}
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`;
   const headers = {
     'Content-Type': 'application/json',
-    ...(options.headers || {})
+    ...demoSessionHeaders(),
+    ...(options.headers || {}),
   };
 
   try {

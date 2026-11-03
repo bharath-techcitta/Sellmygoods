@@ -16,7 +16,7 @@ const defaultPoData = {
     payment_status: 'Unpaid',
     delivery_date: '2026-11-20',
     buyer_name: 'Marcus Vance',
-    entity_name: 'SellMyGoods Corp US',
+    entity_name: 'Procurio Corp US',
     department: 'Information Technology',
     gross_amount: 32000.0,
     tax_amount: 6000.0,

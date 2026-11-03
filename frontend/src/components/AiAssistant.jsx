@@ -46,7 +46,7 @@ export default function AiAssistant() {
         }}
         onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
         onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-        title="SellMyGoods AI Assistant"
+        title="Procurio AI Assistant"
       >
         <span style={{ fontSize: '24px' }}>✨</span>
       </button>
@@ -84,7 +84,7 @@ export default function AiAssistant() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{ fontSize: '18px' }}>✨</span>
               <div>
-                <div style={{ fontWeight: '700', fontSize: '15px' }}>SellMyGoods AI Copilot</div>
+                <div style={{ fontWeight: '700', fontSize: '15px' }}>Procurio AI Copilot</div>
                 <div style={{ fontSize: '11px', color: '#d8b4fe' }}>Grounding in live catalog & quotes</div>
               </div>
             </div>

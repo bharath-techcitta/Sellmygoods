@@ -76,7 +76,7 @@ export default function Sidebar({ activePortal, currentRoute, navigateTo, isColl
         {!isCollapsed && (
           <div>
             <div style={{ fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px', lineHeight: 1 }}>
-              SellMyGoods
+              Procurio
             </div>
             <div style={{ fontSize: '10px', color: '#b5a5cf', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: '3px' }}>
               Procurement 360

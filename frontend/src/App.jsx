@@ -33,6 +33,7 @@ import BuyerContracts from './pages/buyer/BuyerContracts';
 import BuyerAuctions from './pages/buyer/BuyerAuctions';
 
 import { api } from './api';
+import { readDemoSession, writeDemoSession } from './demoSession';
 
 export default function App() {
   const [activePortal, setActivePortal] = useState('admin'); // 'admin' or 'buyer'
@@ -47,22 +48,24 @@ export default function App() {
   const [selectedPoId, setSelectedPoId] = useState(1);
 
   useEffect(() => {
-    // Initial fetch of current user
-    api.getMe().then((res) => {
-      if (res && res.user) {
-        setActivePortal(res.user.portal);
-        setCurrentRole(res.user.role);
-        setCurrentRoute(res.user.portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
-      }
-    }).catch(console.error);
+    const saved = readDemoSession();
+    setActivePortal(saved.portal);
+    setCurrentRole(saved.role);
+    setCurrentRoute(saved.portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
+
+    // Optional health check — do NOT overwrite role/portal from server (avoids reset on deploy).
+    api.getMe().catch((err) => {
+      console.warn('[Procurio] API unreachable; using saved demo role.', err?.message || err);
+    });
   }, []);
 
   const handleSwitchRole = async (role, portal) => {
+    writeDemoSession({ role, portal, supplier_id: 1 });
+    setActivePortal(portal);
+    setCurrentRole(role);
+    setCurrentRoute(portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
     try {
-      const res = await api.switchRole(role, portal);
-      setActivePortal(portal);
-      setCurrentRole(role);
-      setCurrentRoute(portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
+      await api.switchRole(role, portal, 1);
     } catch (e) {
       console.error(e);
     }

@@ -167,16 +167,16 @@ def seed_database(force: bool = False):
         print("Database already seeded; supplemental demo data ensured.")
         return
 
-    print("Seeding SellMyGoods database...")
+    print("Seeding Procurio database...")
 
     # Users
     users = [
-        User(email="marcus.vance@sellmygoods.com", full_name="Marcus Vance", role="procurement_buyer", portal="admin", avatar_initials="MV"),
+        User(email="marcus.vance@procurio.com", full_name="Marcus Vance", role="procurement_buyer", portal="admin", avatar_initials="MV"),
         User(email="elena.rostova@precisioncomponents.com", full_name="Elena Rostova", role="supplier_user", portal="buyer", supplier_id=1, avatar_initials="ER"),
-        User(email="sarah.jenkins@sellmygoods.com", full_name="Sarah Jenkins", role="requester", portal="admin", avatar_initials="SJ"),
-        User(email="david.chen@sellmygoods.com", full_name="David Chen", role="finance_approver", portal="admin", avatar_initials="DC"),
-        User(email="rachel.adams@sellmygoods.com", full_name="Rachel Adams", role="legal_reviewer", portal="admin", avatar_initials="RA"),
-        User(email="admin@sellmygoods.com", full_name="System Administrator", role="tenant_admin", portal="admin", avatar_initials="SA"),
+        User(email="sarah.jenkins@procurio.com", full_name="Sarah Jenkins", role="requester", portal="admin", avatar_initials="SJ"),
+        User(email="david.chen@procurio.com", full_name="David Chen", role="finance_approver", portal="admin", avatar_initials="DC"),
+        User(email="rachel.adams@procurio.com", full_name="Rachel Adams", role="legal_reviewer", portal="admin", avatar_initials="RA"),
+        User(email="admin@procurio.com", full_name="System Administrator", role="tenant_admin", portal="admin", avatar_initials="SA"),
     ]
     db.add_all(users)
     db.commit()
@@ -338,10 +338,10 @@ def seed_database(force: bool = False):
         pr_type="Goods",
         status="Approved",
         requester_name="Sarah Jenkins",
-        requester_email="sarah.jenkins@sellmygoods.com",
+        requester_email="sarah.jenkins@procurio.com",
         buyer_name="Marcus Vance",
         department="Information Technology",
-        business_entity="SellMyGoods Corp US",
+        business_entity="Procurio Corp US",
         currency="USD",
         total_amount=32000.0,
         delivery_date="2026-11-20",
@@ -357,10 +357,10 @@ def seed_database(force: bool = False):
         pr_type="Goods",
         status="Pending Approval",
         requester_name="Mike Alvarez",
-        requester_email="mike.alvarez@sellmygoods.com",
+        requester_email="mike.alvarez@procurio.com",
         buyer_name="Marcus Vance",
         department="Plant Operations",
-        business_entity="SellMyGoods Corp US",
+        business_entity="Procurio Corp US",
         currency="USD",
         total_amount=15500.0,
         delivery_date="2026-12-05",
@@ -376,10 +376,10 @@ def seed_database(force: bool = False):
         pr_type="Goods",
         status="Draft",
         requester_name="Sarah Jenkins",
-        requester_email="sarah.jenkins@sellmygoods.com",
+        requester_email="sarah.jenkins@procurio.com",
         buyer_name="Marcus Vance",
         department="Information Technology",
-        business_entity="SellMyGoods Corp US",
+        business_entity="Procurio Corp US",
         currency="USD",
         total_amount=18500.0,
         delivery_date="2026-12-15",
@@ -544,7 +544,7 @@ def seed_database(force: bool = False):
         payment_status="Unpaid",
         delivery_date="2026-11-20",
         buyer_name="Marcus Vance",
-        entity_name="SellMyGoods Corp US",
+        entity_name="Procurio Corp US",
         department="Information Technology",
         gross_amount=32000.0,
         tax_amount=6000.0,
@@ -562,7 +562,7 @@ def seed_database(force: bool = False):
         payment_status="Paid",
         delivery_date="2026-12-05",
         buyer_name="Marcus Vance",
-        entity_name="SellMyGoods Corp US",
+        entity_name="Procurio Corp US",
         department="Logistics",
         gross_amount=22000.0,
         tax_amount=2500.0,
@@ -580,7 +580,7 @@ def seed_database(force: bool = False):
         payment_status="Paid",
         delivery_date="2026-10-15",
         buyer_name="Marcus Vance",
-        entity_name="SellMyGoods Corp US",
+        entity_name="Procurio Corp US",
         department="Plant Operations",
         gross_amount=11000.0,
         tax_amount=1800.0,
@@ -780,7 +780,7 @@ def seed_database(force: bool = False):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Seed SellMyGoods demo data (Neon / local).")
+    parser = argparse.ArgumentParser(description="Seed Procurio demo data (Neon / local).")
     parser.add_argument(
         "--force",
         action="store_true",
