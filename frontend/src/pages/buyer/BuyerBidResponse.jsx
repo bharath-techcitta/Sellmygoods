@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../api';
+import { api } from '../../api';
 
 export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
   const [activeTab, setActiveTab] = useState('financial'); // technical, financial

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api } from '../../api';
 
 const defaultBudgets = [
   { id: 1, fiscal_period: 'FY 2026-2027', department: 'Information Technology', cost_centre: 'CC-1020-IT', approved_budget: 350000.0, adjustments: 0.0, pr_reserved: 32000.0, po_committed: 85000.0, invoiced_actuals: 64000.0, available_balance: 169000.0 },

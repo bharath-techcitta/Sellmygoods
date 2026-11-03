@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 import CompareBidsModal from '../../components/CompareBidsModal';
 import InviteSupplierDrawer from '../../components/InviteSupplierDrawer';
