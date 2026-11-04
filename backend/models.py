@@ -318,6 +318,36 @@ class Auction(Base):
     current_best_bid = Column(Float, default=48500.0)
     best_bidder_id = Column(Integer, nullable=True)
     total_bids_placed = Column(Integer, default=14)
+    freight_fixed = Column(Float, default=0.0)
+    tax_rate_pct = Column(Float, default=18.0)
+    min_bid_improvement = Column(Float, default=5000.0)
+    visibility = Column(String, default="own_rank_only")
+    terms_version = Column(String, default="v3")
+    currency = Column(String, default="USD")
+    extensions_used = Column(Integer, default=0)
+    max_extensions = Column(Integer, default=5)
+
+class AuctionLineItem(Base):
+    __tablename__ = "auction_line_items"
+    id = Column(Integer, primary_key=True, index=True)
+    auction_id = Column(Integer, ForeignKey("auctions.id"), index=True)
+    line_code = Column(String)
+    description = Column(String)
+    quantity = Column(Float, default=1.0)
+    uom = Column(String, default="MT")
+    last_rate = Column(Float, default=0.0)
+
+class AuctionBidReceipt(Base):
+    __tablename__ = "auction_bid_receipts"
+    id = Column(Integer, primary_key=True, index=True)
+    auction_id = Column(Integer, ForeignKey("auctions.id"), index=True)
+    supplier_id = Column(Integer, index=True)
+    receipt_id = Column(String, unique=True, index=True)
+    evaluated_total = Column(Float)
+    rank_at_acceptance = Column(Integer, default=1)
+    outcome = Column(String, default="Accepted")
+    line_rates = Column(JSON)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Budget(Base):
     __tablename__ = "budgets"

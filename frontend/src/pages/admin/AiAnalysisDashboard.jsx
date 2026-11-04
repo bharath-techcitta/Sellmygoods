@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
+import { isChartsEnabled } from '../../components/charts/chartsEnabled';
+import AiAnalysisCharts from '../../components/charts/AiAnalysisCharts';
 
 const defaultAiData = {
   supplier_name: "Precision Components Ltd",
@@ -52,6 +54,8 @@ export default function AiAnalysisDashboard() {
           </p>
         </div>
       </div>
+
+      {isChartsEnabled() && <AiAnalysisCharts data={data} />}
 
       {/* Paired Cards (Section E18, Image 28) */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>

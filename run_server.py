@@ -9,6 +9,7 @@ import sys
 # Ensure current directory is on python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from backend.schema_migrate import ensure_postgres_schema
 from backend.seed import seed_database
 
 if __name__ == "__main__":
@@ -17,7 +18,8 @@ if __name__ == "__main__":
     print("  Dual-Portal Platform: Admin Portal + Buyer Portal")
     print("=" * 70)
     
-    # 1. Initialize & Seed Database
+    # 1. Sync schema (Neon/Render) and seed supplemental demo data
+    ensure_postgres_schema()
     seed_database()
     
     # 2. Start Uvicorn Server

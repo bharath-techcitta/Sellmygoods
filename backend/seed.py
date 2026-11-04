@@ -3,7 +3,8 @@ from .database import engine, Base, SessionLocal
 from .models import (
     User, Category, Item, Supplier, SupplierContact, SupplierBank, SupplierDoc,
     Requisition, RequisitionLine, SourcingEvent, BidResponse, BidLine,
-    PurchaseOrder, POLine, GoodsReceipt, Invoice, Contract, Clause, Auction, Budget,
+    PurchaseOrder, POLine, GoodsReceipt, Invoice, Contract, Clause, Auction, AuctionLineItem,
+    AuctionBidReceipt, Budget,
     ApprovalWorkflow, ApprovalTask
 )
 from .calculations import calculate_quote_line, calculate_composite_score
@@ -48,8 +49,465 @@ def ensure_contract_clause_data(db) -> None:
     db.commit()
 
 
+def ensure_purchase_orders_and_invoices(db) -> None:
+    """Restore demo POs/invoices when DB was partially seeded (e.g. empty PO table on Neon)."""
+    if db.query(PurchaseOrder).first():
+        return
+    s1 = db.query(Supplier).filter(Supplier.code == "SUP_00101").first() or db.query(Supplier).first()
+    s2 = db.query(Supplier).offset(1).first() if db.query(Supplier).count() > 1 else s1
+    s5 = db.query(Supplier).offset(4).first() if db.query(Supplier).count() > 4 else s1
+    if not s1:
+        return
+
+    po1 = PurchaseOrder(
+        po_number="PO_2026_0142",
+        supplier_id=s1.id,
+        source_pr="PR_00084",
+        source_rfq="RFQ_2026_091",
+        status="Issued",
+        approval_status="Approved",
+        receipt_status="Pending Receipt",
+        invoice_status="Not Invoiced",
+        payment_status="Unpaid",
+        delivery_date="2026-11-20",
+        buyer_name="Marcus Vance",
+        entity_name="Procurio Corp US",
+        department="Information Technology",
+        gross_amount=32000.0,
+        tax_amount=6000.0,
+        net_amount=36000.0,
+    )
+    po2 = PurchaseOrder(
+        po_number="PO_2026_0143",
+        supplier_id=s2.id if s2 else s1.id,
+        source_pr="PR_00085",
+        source_rfq="RFQ_2026_092",
+        status="Approved",
+        approval_status="Approved",
+        receipt_status="Fully Received",
+        invoice_status="Invoiced",
+        payment_status="Paid",
+        delivery_date="2026-12-05",
+        buyer_name="Marcus Vance",
+        entity_name="Procurio Corp US",
+        department="Logistics",
+        gross_amount=22000.0,
+        tax_amount=2500.0,
+        net_amount=24500.0,
+    )
+    po3 = PurchaseOrder(
+        po_number="PO_2026_0144",
+        supplier_id=s5.id if s5 else s1.id,
+        source_pr="PR_00086",
+        source_rfq="RFQ_2026_090",
+        status="Complete",
+        approval_status="Approved",
+        receipt_status="Fully Invoiced",
+        invoice_status="Paid",
+        payment_status="Paid",
+        delivery_date="2026-10-15",
+        buyer_name="Marcus Vance",
+        entity_name="Procurio Corp US",
+        department="Plant Operations",
+        gross_amount=11000.0,
+        tax_amount=1800.0,
+        net_amount=12800.0,
+    )
+    db.add_all([po1, po2, po3])
+    db.commit()
+    db.refresh(po1)
+    db.refresh(po2)
+    db.refresh(po3)
+
+    if not db.query(POLine).filter(POLine.po_id == po1.id).first():
+        db.add(
+            POLine(
+                po_id=po1.id,
+                line_number=1,
+                description="Cisco Catalyst 9300 48-Port Switch",
+                ordered_qty=10.0,
+                received_qty=0.0,
+                accepted_qty=0.0,
+                rejected_qty=0.0,
+                uom="Unit",
+                unit_price=3000.0,
+                net_amount=36000.0,
+            )
+        )
+
+    if not db.query(Invoice).first():
+        db.add_all([
+            Invoice(
+                invoice_number="INV_99214",
+                po_id=po1.id,
+                supplier_id=s1.id,
+                invoice_date="2026-11-03",
+                due_date="2026-12-03",
+                status="Pending Approval",
+                match_status="3-Way Matched",
+                subtotal=30000.0,
+                tax_amount=6000.0,
+                total_amount=36000.0,
+                paid_amount=0.0,
+                currency="USD",
+            ),
+            Invoice(
+                invoice_number="INV_99215",
+                po_id=po2.id,
+                supplier_id=(s2.id if s2 else s1.id),
+                invoice_date="2026-10-28",
+                due_date="2026-11-28",
+                status="Verified",
+                match_status="3-Way Matched",
+                subtotal=22000.0,
+                tax_amount=2500.0,
+                total_amount=24500.0,
+                paid_amount=24500.0,
+                currency="USD",
+            ),
+        ])
+    db.commit()
+
+
+def ensure_reverse_live_auction(db) -> None:
+    """Live reverse procurement auction console (scrap / HMS lines)."""
+    if db.query(Auction).filter(Auction.auction_number == "AUC_2026_013").first():
+        return
+    now = datetime.datetime.utcnow()
+    s1 = db.query(Supplier).filter(Supplier.code == "SUP_00101").first() or db.query(Supplier).first()
+    auc = Auction(
+        auction_number="AUC_2026_013",
+        title="Reverse procurement auction — HMS scrap material supply",
+        auction_type="Reverse Sourcing",
+        status="Live",
+        pr_number="PR_00088",
+        current_approver="Marcus Vance",
+        start_time=now - datetime.timedelta(minutes=30),
+        end_time=now + datetime.timedelta(minutes=120),
+        reserve_price=3500000.0,
+        min_decrement=5000.0,
+        min_bid_improvement=5000.0,
+        current_best_bid=3245000.0,
+        best_bidder_id=s1.id if s1 else None,
+        total_bids_placed=1,
+        freight_fixed=85000.0,
+        tax_rate_pct=18.0,
+        visibility="own_rank_only",
+        terms_version="3",
+        currency="INR",
+        extensions_used=1,
+        max_extensions=5,
+    )
+    db.add(auc)
+    db.commit()
+    db.refresh(auc)
+    lines = [
+        ("SCR-01", "HMS 1 — heavy melting scrap grade A", 60.0, "MT", 48500.0),
+        ("SCR-02", "HMS 2 — mixed scrap bundle", 40.0, "MT", 46200.0),
+    ]
+    for code, desc, qty, uom, rate in lines:
+        db.add(
+            AuctionLineItem(
+                auction_id=auc.id,
+                line_code=code,
+                description=desc,
+                quantity=qty,
+                uom=uom,
+                last_rate=rate,
+            )
+        )
+    if s1:
+        db.add(
+            AuctionBidReceipt(
+                auction_id=auc.id,
+                supplier_id=s1.id,
+                receipt_id="BID-142",
+                evaluated_total=3245000.0,
+                rank_at_acceptance=1,
+                outcome="Accepted",
+                line_rates=[
+                    {"line_code": "SCR-01", "new_rate": 47200.0},
+                    {"line_code": "SCR-02", "new_rate": 45100.0},
+                ],
+                created_at=now - datetime.timedelta(minutes=12),
+            )
+        )
+    db.commit()
+
+
+def _auction_by_code(db, code: str):
+    return db.query(Auction).filter(Auction.auction_number == code).first()
+
+
+def ensure_auction_dummy_data(db) -> None:
+    """Extra auction lots for admin directory, buyer terminal, and live consoles."""
+    ensure_reverse_live_auction(db)
+    now = datetime.datetime.utcnow()
+    s1 = db.query(Supplier).filter(Supplier.code == "SUP_00101").first() or db.query(Supplier).first()
+    s2 = db.query(Supplier).filter(Supplier.code == "SUP_00102").first() or s1
+    s5 = db.query(Supplier).filter(Supplier.code == "SUP_00105").first() or s1
+
+    catalog = [
+        {
+            "auction_number": "AUC_2026_011",
+            "title": "Surplus automated factory machining center & robotic arms",
+            "auction_type": "Forward Disposal",
+            "status": "Live",
+            "pr_number": "PR_00078",
+            "current_approver": "Disposal Officer",
+            "start_time": now - datetime.timedelta(hours=2),
+            "end_time": now + datetime.timedelta(hours=4),
+            "reserve_price": 45000.0,
+            "min_decrement": 500.0,
+            "current_best_bid": 52000.0,
+            "best_bidder_id": s5.id if s5 else None,
+            "total_bids_placed": 18,
+            "currency": "USD",
+        },
+        {
+            "auction_number": "AUC_2026_012",
+            "title": "Bulk packaging cardboard corrugated boxes Q1 lot",
+            "auction_type": "Reverse Sourcing",
+            "status": "Scheduled",
+            "pr_number": "PR_00080",
+            "current_approver": "Marcus Vance",
+            "start_time": now + datetime.timedelta(days=1),
+            "end_time": now + datetime.timedelta(days=2),
+            "reserve_price": 28000.0,
+            "min_decrement": 200.0,
+            "min_bid_improvement": 200.0,
+            "current_best_bid": 28000.0,
+            "best_bidder_id": None,
+            "total_bids_placed": 0,
+            "currency": "USD",
+        },
+        {
+            "auction_number": "AUC_2026_014",
+            "title": "Reverse auction — industrial lubricants & MRO fluids (annual)",
+            "auction_type": "Reverse Sourcing",
+            "status": "Live",
+            "pr_number": "PR_00089",
+            "current_approver": "Marcus Vance",
+            "start_time": now - datetime.timedelta(hours=1),
+            "end_time": now + datetime.timedelta(hours=3),
+            "reserve_price": 185000.0,
+            "min_decrement": 2500.0,
+            "min_bid_improvement": 2500.0,
+            "current_best_bid": 172400.0,
+            "best_bidder_id": s2.id if s2 else None,
+            "total_bids_placed": 11,
+            "freight_fixed": 4200.0,
+            "tax_rate_pct": 18.0,
+            "currency": "USD",
+            "extensions_used": 0,
+            "max_extensions": 5,
+        },
+        {
+            "auction_number": "AUC_2026_015",
+            "title": "Forward disposal — legacy warehouse racking & conveyors",
+            "auction_type": "Forward Disposal",
+            "status": "Closed",
+            "pr_number": "PR_00072",
+            "current_approver": "Facilities Lead",
+            "start_time": now - datetime.timedelta(days=14),
+            "end_time": now - datetime.timedelta(days=13),
+            "reserve_price": 12000.0,
+            "min_decrement": 250.0,
+            "current_best_bid": 15800.0,
+            "best_bidder_id": s1.id if s1 else None,
+            "total_bids_placed": 24,
+            "currency": "USD",
+        },
+        {
+            "auction_number": "AUC_2026_016",
+            "title": "LOT-2 scheduled — alloy additions & ferro silicon blend",
+            "auction_type": "Reverse Sourcing",
+            "status": "Scheduled",
+            "pr_number": "PR_00090",
+            "current_approver": "Marcus Vance",
+            "start_time": now + datetime.timedelta(hours=6),
+            "end_time": now + datetime.timedelta(hours=10),
+            "reserve_price": 890000.0,
+            "min_decrement": 8000.0,
+            "min_bid_improvement": 8000.0,
+            "current_best_bid": 890000.0,
+            "best_bidder_id": None,
+            "total_bids_placed": 0,
+            "freight_fixed": 45000.0,
+            "tax_rate_pct": 18.0,
+            "currency": "INR",
+        },
+        {
+            "auction_number": "AUC_2026_017",
+            "title": "Enterprise laptop refresh — reverse auction (500 units)",
+            "auction_type": "Reverse Sourcing",
+            "status": "Award Under Process",
+            "pr_number": "PR_00091",
+            "current_approver": "David Chen",
+            "start_time": now - datetime.timedelta(days=3),
+            "end_time": now - datetime.timedelta(days=2),
+            "reserve_price": 925000.0,
+            "min_decrement": 5000.0,
+            "min_bid_improvement": 5000.0,
+            "current_best_bid": 887500.0,
+            "best_bidder_id": s1.id if s1 else None,
+            "total_bids_placed": 32,
+            "currency": "USD",
+        },
+        {
+            "auction_number": "AUC_2026_018",
+            "title": "Regional cold-chain transport lanes — Q2 tender auction",
+            "auction_type": "Reverse Sourcing",
+            "status": "Live",
+            "pr_number": "PR_00092",
+            "current_approver": "Sarah Jenkins",
+            "start_time": now - datetime.timedelta(minutes=45),
+            "end_time": now + datetime.timedelta(minutes=90),
+            "reserve_price": 410000.0,
+            "min_decrement": 3500.0,
+            "min_bid_improvement": 3500.0,
+            "current_best_bid": 396200.0,
+            "best_bidder_id": s2.id if s2 else None,
+            "total_bids_placed": 7,
+            "freight_fixed": 0.0,
+            "tax_rate_pct": 12.0,
+            "currency": "USD",
+        },
+    ]
+
+    line_specs = {
+        "AUC_2026_014": [
+            ("LUB-01", "Synthetic hydraulic fluid ISO 46 — bulk tote", 120.0, "L", 42.5),
+            ("LUB-02", "Food-grade compressor oil — 208L drum", 80.0, "Drum", 185.0),
+        ],
+        "AUC_2026_016": [
+            ("ALY-01", "Ferro silicon 75% — standard grade", 10.0, "MT", 89000.0),
+            ("ALY-02", "Carbon raiser low sulfur", 5.0, "MT", 72000.0),
+        ],
+        "AUC_2026_018": [
+            ("CLD-01", "Dallas–Chicago reefer lane (weekly slot)", 12.0, "Trip", 8200.0),
+            ("CLD-02", "Houston–Atlanta chilled pallet load", 12.0, "Trip", 6400.0),
+        ],
+    }
+
+    for spec in catalog:
+        code = spec.pop("auction_number")
+        if _auction_by_code(db, code):
+            continue
+        bidder = spec.pop("best_bidder_id", None)
+        auc = Auction(auction_number=code, best_bidder_id=bidder, **spec)
+        db.add(auc)
+        db.commit()
+        db.refresh(auc)
+        for row in line_specs.get(code, []):
+            db.add(
+                AuctionLineItem(
+                    auction_id=auc.id,
+                    line_code=row[0],
+                    description=row[1],
+                    quantity=row[2],
+                    uom=row[3],
+                    last_rate=row[4],
+                )
+            )
+        if code == "AUC_2026_014" and s2:
+            db.add(
+                AuctionBidReceipt(
+                    auction_id=auc.id,
+                    supplier_id=s2.id,
+                    receipt_id="BID-LUB-88",
+                    evaluated_total=172400.0,
+                    rank_at_acceptance=1,
+                    outcome="Accepted",
+                    line_rates=[{"line_code": "LUB-01", "new_rate": 41.2}, {"line_code": "LUB-02", "new_rate": 178.0}],
+                    created_at=now - datetime.timedelta(minutes=20),
+                )
+            )
+        if code == "AUC_2026_018" and s2:
+            db.add(
+                AuctionBidReceipt(
+                    auction_id=auc.id,
+                    supplier_id=s2.id,
+                    receipt_id="BID-CLD-07",
+                    evaluated_total=396200.0,
+                    rank_at_acceptance=1,
+                    outcome="Accepted",
+                    created_at=now - datetime.timedelta(minutes=8),
+                )
+            )
+        db.commit()
+
+    # Extra bid history on flagship scrap auction for richer activity feed
+    scrap = _auction_by_code(db, "AUC_2026_013")
+    if scrap and s2 and not db.query(AuctionBidReceipt).filter(AuctionBidReceipt.receipt_id == "BID-141").first():
+        db.add(
+            AuctionBidReceipt(
+                auction_id=scrap.id,
+                supplier_id=s2.id,
+                receipt_id="BID-141",
+                evaluated_total=3268000.0,
+                rank_at_acceptance=2,
+                outcome="Accepted",
+                created_at=now - datetime.timedelta(minutes=28),
+            )
+        )
+        scrap.total_bids_placed = max(int(scrap.total_bids_placed or 0), 3)
+        db.commit()
+
+    ensure_live_auctions_ready(db)
+
+
+def ensure_live_auctions_ready(db) -> None:
+    """Keep Live auctions bid-ready: future end times, line items, session receipts."""
+    now = datetime.datetime.utcnow()
+    live = db.query(Auction).filter(Auction.status == "Live").all()
+    default_lines = {
+        "AUC_2026_013": [
+            ("SCR-01", "HMS 1 — heavy melting scrap grade A", 60.0, "MT", 48500.0),
+            ("SCR-02", "HMS 2 — mixed scrap bundle", 40.0, "MT", 46200.0),
+        ],
+        "AUC_2026_014": [
+            ("LUB-01", "Synthetic hydraulic fluid ISO 46 — bulk tote", 120.0, "L", 42.5),
+            ("LUB-02", "Food-grade compressor oil — 208L drum", 80.0, "Drum", 185.0),
+        ],
+        "AUC_2026_018": [
+            ("CLD-01", "Dallas–Chicago reefer lane (weekly slot)", 12.0, "Trip", 8200.0),
+            ("CLD-02", "Houston–Atlanta chilled pallet load", 12.0, "Trip", 6400.0),
+        ],
+    }
+    for auc in live:
+        if not auc.end_time or auc.end_time <= now:
+            auc.end_time = now + datetime.timedelta(hours=2)
+        if not auc.start_time or auc.start_time > now:
+            auc.start_time = now - datetime.timedelta(minutes=45)
+        if auc.auction_type == "Reverse Sourcing":
+            line_count = db.query(AuctionLineItem).filter(AuctionLineItem.auction_id == auc.id).count()
+            if line_count == 0:
+                rows = default_lines.get(
+                    auc.auction_number,
+                    [
+                        ("LN-01", f"Primary lot — {auc.title[:48]}", 1.0, "Lot", float(auc.current_best_bid or 1000) * 0.6),
+                        ("LN-02", "Secondary line / accessory scope", 1.0, "Lot", float(auc.current_best_bid or 1000) * 0.4),
+                    ],
+                )
+                for code, desc, qty, uom, rate in rows:
+                    db.add(
+                        AuctionLineItem(
+                            auction_id=auc.id,
+                            line_code=code,
+                            description=desc,
+                            quantity=qty,
+                            uom=uom,
+                            last_rate=rate,
+                        )
+                    )
+    db.commit()
+
+
 def ensure_supplemental_data(db) -> None:
     """Idempotent extras so detail pages (PR/PO) are never empty after seed."""
+    ensure_purchase_orders_and_invoices(db)
+    ensure_auction_dummy_data(db)
     pr2 = db.query(Requisition).filter(Requisition.pr_number == "PR_00085").first()
     if pr2 and not db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr2.id).first():
         item3 = db.query(Item).filter(Item.sku == "IND-VLV-22").first()
@@ -197,8 +655,11 @@ def seed_database(force: bool = False):
         else:
             Base.metadata.drop_all(bind=engine)
 
-    Base.metadata.create_all(bind=engine)
+    from .schema_migrate import ensure_postgres_schema
+    ensure_postgres_schema()
     db = SessionLocal()
+    # Neon long seeds: avoid lazy-load after commit when the pool drops idle connections
+    db.expire_on_commit = False
 
     # Check if already seeded
     if db.query(Supplier).first():
@@ -360,14 +821,17 @@ def seed_database(force: bool = False):
     )
     db.add_all([s1, s2, s3, s4, s5, s6, s7])
     db.commit()
+    for _sup in (s1, s2, s3, s4, s5, s6, s7):
+        db.refresh(_sup)
+    s1_id, s2_id, s3_id, s4_id, s5_id, s6_id, s7_id = s1.id, s2.id, s3.id, s4.id, s5.id, s6.id, s7.id
 
     # Supplier Contacts & Banking & Docs for Precision Components
-    c1 = SupplierContact(supplier_id=s1.id, name="Elena Rostova", designation="Director of Strategic Accounts", email="elena.rostova@precisioncomponents.com", mobile="+1 (555) 234-8901", is_primary=True, is_signatory=True)
-    c2 = SupplierContact(supplier_id=s1.id, name="James Thorne", designation="Head of Engineering & QA", email="jthorne@precisioncomponents.com", mobile="+1 (555) 234-8905", is_primary=False, is_signatory=False)
-    b1 = SupplierBank(supplier_id=s1.id, bank_name="JPMorgan Chase Bank, N.A.", account_holder="Precision Components Ltd", account_number_masked="••••••••9942", routing_swift="CHASUS33XXX", currency="USD", is_verified=True)
-    d1 = SupplierDoc(supplier_id=s1.id, title="ISO 9001:2015 Quality Management Certificate", doc_type="Certificate", file_name="ISO_9001_Precision_2026.pdf", status="Verified")
-    d2 = SupplierDoc(supplier_id=s1.id, title="Certificate of Incorporation & Good Standing", doc_type="License", file_name="Cert_Incorporation_DE.pdf", status="Verified")
-    d3 = SupplierDoc(supplier_id=s1.id, title="W-9 Federal Tax Certification", doc_type="Tax", file_name="W9_Signed_2026.pdf", status="Verified")
+    c1 = SupplierContact(supplier_id=s1_id, name="Elena Rostova", designation="Director of Strategic Accounts", email="elena.rostova@precisioncomponents.com", mobile="+1 (555) 234-8901", is_primary=True, is_signatory=True)
+    c2 = SupplierContact(supplier_id=s1_id, name="James Thorne", designation="Head of Engineering & QA", email="jthorne@precisioncomponents.com", mobile="+1 (555) 234-8905", is_primary=False, is_signatory=False)
+    b1 = SupplierBank(supplier_id=s1_id, bank_name="JPMorgan Chase Bank, N.A.", account_holder="Precision Components Ltd", account_number_masked="••••••••9942", routing_swift="CHASUS33XXX", currency="USD", is_verified=True)
+    d1 = SupplierDoc(supplier_id=s1_id, title="ISO 9001:2015 Quality Management Certificate", doc_type="Certificate", file_name="ISO_9001_Precision_2026.pdf", status="Verified")
+    d2 = SupplierDoc(supplier_id=s1_id, title="Certificate of Incorporation & Good Standing", doc_type="License", file_name="Cert_Incorporation_DE.pdf", status="Verified")
+    d3 = SupplierDoc(supplier_id=s1_id, title="W-9 Federal Tax Certification", doc_type="Tax", file_name="W9_Signed_2026.pdf", status="Verified")
     db.add_all([c1, c2, b1, d1, d2, d3])
     db.commit()
 
@@ -506,13 +970,15 @@ def seed_database(force: bool = False):
     )
     db.add_all([rfq1, rfq2, rfp1])
     db.commit()
+    rfq1_id, rfq2_id, rfp1_id = rfq1.id, rfq2.id, rfp1.id
+    pr2_id = pr2.id
 
     # Bid Response 1: Precision Components Ltd (matching calculation test case in Section I1!)
     # 10 units * 3,200 = 32,000 gross; 200 unit discount = 2,000 discount; taxable base 30,000; 20% tax = 6,000; net 36,000
     calc1 = calculate_quote_line(quantity=10, unit_price=3200.0, unit_discount=200.0, tax_rate=0.20, is_tax_inclusive=False)
     resp1 = BidResponse(
-        event_id=rfq1.id,
-        supplier_id=s1.id,
+        event_id=rfq1_id,
+        supplier_id=s1_id,
         response_code="RSP_091_PRECISION",
         status="Submitted",
         version=1,
@@ -552,8 +1018,8 @@ def seed_database(force: bool = False):
     # Bid Response 2: Apex Global Logistics
     calc2 = calculate_quote_line(quantity=10, unit_price=3450.0, unit_discount=150.0, tax_rate=0.20, is_tax_inclusive=False)
     resp2 = BidResponse(
-        event_id=rfq1.id,
-        supplier_id=s2.id,
+        event_id=rfq1_id,
+        supplier_id=s2_id,
         response_code="RSP_091_APEX",
         status="Submitted",
         version=1,
@@ -574,7 +1040,7 @@ def seed_database(force: bool = False):
     # Purchase Orders (Image 25)
     po1 = PurchaseOrder(
         po_number="PO_2026_0142",
-        supplier_id=s1.id,
+        supplier_id=s1_id,
         source_pr="PR_00084",
         source_rfq="RFQ_2026_091",
         status="Issued",
@@ -592,7 +1058,7 @@ def seed_database(force: bool = False):
     )
     po2 = PurchaseOrder(
         po_number="PO_2026_0143",
-        supplier_id=s2.id,
+        supplier_id=s2_id,
         source_pr="PR_00085",
         source_rfq="RFQ_2026_092",
         status="Approved",
@@ -610,7 +1076,7 @@ def seed_database(force: bool = False):
     )
     po3 = PurchaseOrder(
         po_number="PO_2026_0144",
-        supplier_id=s5.id,
+        supplier_id=s5_id,
         source_pr="PR_00086",
         source_rfq="RFQ_2026_090",
         status="Complete",
@@ -628,9 +1094,10 @@ def seed_database(force: bool = False):
     )
     db.add_all([po1, po2, po3])
     db.commit()
+    po1_id, po2_id, po3_id = po1.id, po2.id, po3.id
 
     poline1 = POLine(
-        po_id=po1.id,
+        po_id=po1_id,
         line_number=1,
         description="Cisco Catalyst 9300 48-Port Switch",
         ordered_qty=10.0,
@@ -647,8 +1114,8 @@ def seed_database(force: bool = False):
     # Invoices (Section E14 & Appendix)
     inv1 = Invoice(
         invoice_number="INV_99214",
-        po_id=po1.id,
-        supplier_id=s1.id,
+        po_id=po1_id,
+        supplier_id=s1_id,
         invoice_date="2026-11-03",
         due_date="2026-12-03",
         status="Pending Approval",
@@ -661,8 +1128,8 @@ def seed_database(force: bool = False):
     )
     inv2 = Invoice(
         invoice_number="INV_99215",
-        po_id=po2.id,
-        supplier_id=s2.id,
+        po_id=po2_id,
+        supplier_id=s2_id,
         invoice_date="2026-10-28",
         due_date="2026-11-28",
         status="Verified",
@@ -675,8 +1142,8 @@ def seed_database(force: bool = False):
     )
     inv3 = Invoice(
         invoice_number="INV_99216",
-        po_id=po3.id,
-        supplier_id=s5.id,
+        po_id=po3_id,
+        supplier_id=s5_id,
         invoice_date="2026-10-18",
         due_date="2026-11-18",
         status="Approved",
@@ -689,6 +1156,7 @@ def seed_database(force: bool = False):
     )
     db.add_all([inv1, inv2, inv3])
     db.commit()
+    inv1_id = inv1.id
 
     ensure_contract_clause_data(db)
 
@@ -705,7 +1173,7 @@ def seed_database(force: bool = False):
         reserve_price=45000.0,
         min_decrement=500.0,
         current_best_bid=52000.0,
-        best_bidder_id=s5.id,
+        best_bidder_id=s5_id,
         total_bids_placed=18
     )
     auc2 = Auction(
@@ -724,6 +1192,8 @@ def seed_database(force: bool = False):
         total_bids_placed=0
     )
     db.add_all([auc1, auc2])
+    db.commit()
+    ensure_auction_dummy_data(db)
 
     # Budgets (Image 1 & Section E16)
     b_it = Budget(fiscal_period="FY 2026-2027", department="Information Technology", cost_centre="CC-1020-IT", approved_budget=350000.0, adjustments=0.0, pr_reserved=32000.0, po_committed=85000.0, invoiced_actuals=64000.0, available_balance=169000.0)
@@ -757,10 +1227,10 @@ def seed_database(force: bool = False):
 
     # Approval Tasks (Image 1 Dashboard Pending Approvals)
     tasks = [
-        ApprovalTask(module="Supplier Registration", record_id=s3.id, record_code="SUP_00103", title="Review Onboarding: TechVibe Cloud Systems Corp", requested_by="System Invitation", assignee_role="Compliance Reviewer", amount=None, priority="High", due_date="2026-11-05"),
-        ApprovalTask(module="Purchase Request", record_id=pr2.id, record_code="PR_00085", title="Approve PR: High Pressure Ball Valves", requested_by="Mike Alvarez", assignee_role="Finance Controller", amount=15500.0, priority="Medium", due_date="2026-11-06"),
-        ApprovalTask(module="Invoice", record_id=inv1.id, record_code="INV_99214", title="3-Way Matched Invoice Review: Precision Components Ltd", requested_by="Accounts Payable", assignee_role="AP Lead", amount=36000.0, priority="Urgent", due_date="2026-11-04"),
-        ApprovalTask(module="Bid Award", record_id=rfq1.id, record_code="RFQ_2026_091", title="Award Evaluation & Commercial Recommendation", requested_by="Marcus Vance", assignee_role="Procurement Lead", amount=36000.0, priority="High", due_date="2026-11-07")
+        ApprovalTask(module="Supplier Registration", record_id=s3_id, record_code="SUP_00103", title="Review Onboarding: TechVibe Cloud Systems Corp", requested_by="System Invitation", assignee_role="Compliance Reviewer", amount=None, priority="High", due_date="2026-11-05"),
+        ApprovalTask(module="Purchase Request", record_id=pr2_id, record_code="PR_00085", title="Approve PR: High Pressure Ball Valves", requested_by="Mike Alvarez", assignee_role="Finance Controller", amount=15500.0, priority="Medium", due_date="2026-11-06"),
+        ApprovalTask(module="Invoice", record_id=inv1_id, record_code="INV_99214", title="3-Way Matched Invoice Review: Precision Components Ltd", requested_by="Accounts Payable", assignee_role="AP Lead", amount=36000.0, priority="Urgent", due_date="2026-11-04"),
+        ApprovalTask(module="Bid Award", record_id=rfq1_id, record_code="RFQ_2026_091", title="Award Evaluation & Commercial Recommendation", requested_by="Marcus Vance", assignee_role="Procurement Lead", amount=36000.0, priority="High", due_date="2026-11-07")
     ]
     db.add_all(tasks)
 

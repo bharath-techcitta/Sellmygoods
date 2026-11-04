@@ -1,137 +1,100 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 
-const defaultBuyerAuctions = [
-  {
-    id: 1,
-    auction_number: 'AUC_2026_011',
-    title: 'Surplus Automated Factory Machining Center & Robotic Arms',
-    status: 'Live',
-    current_best_bid: 52000.0,
-    min_decrement: 500.0,
-    reserve_price: 45000.0,
-    total_bids_placed: 18,
-    currency: 'USD'
+function fmtMoney(auc) {
+  if (auc.currency === 'INR') {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(auc.current_best_bid);
   }
-];
+  return `$${auc.current_best_bid?.toLocaleString()}`;
+}
 
-export default function BuyerAuctions() {
-  const [auctions, setAuctions] = useState(defaultBuyerAuctions);
-  const [bidAmount, setBidAmount] = useState('');
-  const [activeAuction, setActiveAuction] = useState(defaultBuyerAuctions[0]);
-  const [bidMessage, setBidMessage] = useState('');
+export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
+  const [auctions, setAuctions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.getAuctions();
+      setAuctions(Array.isArray(res) ? res : []);
+    } catch (e) {
+      console.error(e);
+      setError(e.message || 'Could not load auctions from the API.');
+      setAuctions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+    const poll = setInterval(load, 12000);
+    return () => clearInterval(poll);
+  }, [load]);
 
-  const load = async () => {
-    try {
-      const res = await api.getAuctions();
-      if (res && res.length) {
-        setAuctions(res);
-        setActiveAuction((prev) => res.find((a) => a.id === prev?.id) || res[0]);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const openLive = (auc) => {
+    onSelectAuction?.(auc.id);
+    navigateTo?.('buyer-auction-console');
   };
 
-  const handlePlaceBid = async (e) => {
-    e.preventDefault();
-    if (!bidAmount || !activeAuction) return;
-    try {
-      const res = await api.placeAuctionBid(activeAuction.id, parseFloat(bidAmount));
-      setBidMessage(res.message || 'Bid submitted successfully.');
-      setBidAmount('');
-      await load();
-    } catch (err) {
-      alert(err.message || 'Bid submission rejected');
-    }
-  };
+  const live = auctions.filter((a) => a.status === 'Live');
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#242424' }}>
-            Live Supplier Auction Terminal
-          </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>
-            Submit dynamic competitive bids with real-time leading benchmark visibility
-          </p>
-        </div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Supplier Auction Terminal</h1>
+        <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
+          Bid on <strong>Live</strong> lots only — reverse (line rates) and forward disposal (single amount)
+        </p>
       </div>
 
-      {bidMessage && (
-        <div style={{ padding: '10px 16px', backgroundColor: '#d1fae8', color: '#0f9d78', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', fontWeight: '600' }}>
-          ✓ {bidMessage}
+      {error && (
+        <div className="card-enterprise" style={{ padding: 16, marginBottom: 16, background: '#fee2e2', color: '#c32e3b', fontSize: 13 }}>
+          {error}
+          <button type="button" onClick={load} style={{ marginLeft: 12, padding: '6px 12px', border: '1px solid #c32e3b', borderRadius: 6, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+            Retry
+          </button>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div className="card-enterprise" style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>Active Auction Events</h3>
-          {auctions.map((auc) => (
-            <div
-              key={auc.id}
-              onClick={() => setActiveAuction(auc)}
-              style={{
-                padding: '14px',
-                border: '1px solid #ededf2',
-                borderRadius: '8px',
-                marginBottom: '10px',
-                cursor: 'pointer',
-                backgroundColor: activeAuction?.id === auc.id ? '#faf5ff' : '#fff'
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <strong style={{ color: '#432177' }}>{auc.auction_number}</strong>
-                <StatusBadge status={auc.status} />
-              </div>
-              <div style={{ fontWeight: '600', marginTop: '4px' }}>{auc.title}</div>
-              <div style={{ fontSize: '12px', color: '#73767b', marginTop: '4px' }}>
-                Current Leading: <strong style={{ color: '#0f9d78' }}>${auc.current_best_bid?.toLocaleString()}</strong>
-              </div>
+      {loading ? (
+        <div className="card-enterprise" style={{ padding: 20, color: '#73767b' }}>Loading auctions…</div>
+      ) : (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Live now ({live.length})</h3>
+          {live.length === 0 ? (
+            <div className="card-enterprise" style={{ padding: 20, marginBottom: 24, color: '#73767b' }}>No live auctions at the moment.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14, marginBottom: 24 }}>
+              {live.map((auc) => (
+                <div key={auc.id} className="card-enterprise" style={{ padding: 18, border: '2px solid #432177' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ color: '#432177' }}>{auc.auction_number}</strong>
+                    <StatusBadge status={auc.status} />
+                  </div>
+                  <div style={{ fontWeight: 600, marginTop: 8, fontSize: 14 }}>{auc.title}</div>
+                  <div style={{ fontSize: 12, color: '#73767b', marginTop: 6 }}>{auc.auction_type}</div>
+                  <div style={{ fontSize: 12, color: '#73767b', marginTop: 8 }}>
+                    Leading: <strong style={{ color: '#0f9d78' }}>{fmtMoney(auc)}</strong>
+                    {' · '}Bids: <strong>{auc.total_bids_placed ?? 0}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openLive(auc)}
+                    style={{ marginTop: 12, width: '100%', padding: '8px 14px', background: '#432177', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Open live console →
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
 
-        {activeAuction && (
-          <div className="card-enterprise" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 14px 0', fontSize: '16px', fontWeight: '700' }}>
-              Place Bid — {activeAuction.auction_number}
-            </h3>
-            <div style={{ padding: '16px', backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9', borderRadius: '8px', textAlign: 'center', marginBottom: '18px' }}>
-              <div style={{ fontSize: '12.5px', color: '#73767b' }}>Current Best Quoted Bid</div>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#432177', margin: '4px 0' }} className="font-mono-numbers">
-                ${activeAuction.current_best_bid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </div>
-            </div>
-
-            <form onSubmit={handlePlaceBid} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600' }}>Your Bid ($ USD)</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="number"
-                  placeholder="Enter competitive amount..."
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  style={{ flex: 1, height: '40px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9' }}
-                />
-                <button
-                  type="submit"
-                  style={{ padding: '0 20px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
-

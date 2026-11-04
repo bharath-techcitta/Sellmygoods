@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import CompletionProgressRing from '../../components/CompletionProgressRing';
+import {
+  readSupplierWizardProgress,
+  writeSupplierWizardProgress,
+  completionFromHighestStep,
+  TOTAL_STEPS,
+} from '../../utils/supplierWizardProgress';
 
 export default function SupplierRegistrationWizard({ onComplete }) {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [completion, setCompletion] = useState(83); // Image 9 shows ~83%
+  const saved = readSupplierWizardProgress();
+  const [currentStep, setCurrentStep] = useState(saved.currentStep);
+  const [highestStep, setHighestStep] = useState(saved.highestStep);
+  const [completion, setCompletion] = useState(saved.completion);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionReceipt, setSubmissionReceipt] = useState(null);
@@ -26,6 +35,44 @@ export default function SupplierRegistrationWizard({ onComplete }) {
     { num: 6, label: 'Review Profile' }
   ];
 
+  const persistProgress = useCallback((step, high, submitted = false) => {
+    const result = writeSupplierWizardProgress({
+      currentStep: step,
+      highestStep: high,
+      submitted,
+    });
+    setCompletion(result.completion);
+    return result;
+  }, []);
+
+  useEffect(() => {
+    const c = completionFromHighestStep(highestStep, isSubmitted, currentStep);
+    setCompletion(c);
+  }, [currentStep, highestStep, isSubmitted]);
+
+  const goToStep = (stepNum) => {
+    const next = Math.max(1, Math.min(TOTAL_STEPS, stepNum));
+    const high = Math.max(highestStep, next);
+    setCurrentStep(next);
+    setHighestStep(high);
+    persistProgress(next, high, isSubmitted);
+  };
+
+  const handleNextStep = () => {
+    const high = Math.max(highestStep, currentStep + 1);
+    const nextStep = Math.min(TOTAL_STEPS, currentStep + 1);
+    setHighestStep(high);
+    setCurrentStep(nextStep);
+    persistProgress(nextStep, high, isSubmitted);
+  };
+
+  const handlePrevStep = () => {
+    if (currentStep <= 1) return;
+    const nextStep = currentStep - 1;
+    setCurrentStep(nextStep);
+    persistProgress(nextStep, highestStep, isSubmitted);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!termsAccepted) {
@@ -39,6 +86,8 @@ export default function SupplierRegistrationWizard({ onComplete }) {
       status: "Submitted to Internal Compliance Review"
     });
     setIsSubmitted(true);
+    persistProgress(TOTAL_STEPS, TOTAL_STEPS, true);
+    setCompletion(100);
   };
 
   return (
@@ -53,17 +102,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
             Complete your legal profile, banking details, and statutory compliance certifications
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '11px', color: '#73767b' }}>Completion Progress</div>
-            <strong style={{ fontSize: '14px', color: '#432177' }}>{completion}% Ready</strong>
-          </div>
-          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: `conic-gradient(#432177 ${completion}%, #e6e6e9 0)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700' }}>
-              {completion}%
-            </div>
-          </div>
-        </div>
+        <CompletionProgressRing targetPercent={completion} size={48} durationMs={700} />
       </div>
 
       {/* Stepper Tabs Bar (Image 8) */}
@@ -74,7 +113,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
           return (
             <div
               key={st.num}
-              onClick={() => setCurrentStep(st.num)}
+              onClick={() => goToStep(st.num)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -346,7 +385,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e6e6e9', paddingTop: '16px', marginTop: '20px' }}>
             <button
               disabled={currentStep === 1}
-              onClick={() => setCurrentStep(currentStep - 1)}
+              onClick={handlePrevStep}
               style={{
                 padding: '8px 16px',
                 borderRadius: '6px',
@@ -362,7 +401,7 @@ export default function SupplierRegistrationWizard({ onComplete }) {
             </button>
             {currentStep < 6 && (
               <button
-                onClick={() => setCurrentStep(currentStep + 1)}
+                onClick={handleNextStep}
                 style={{
                   padding: '8px 20px',
                   borderRadius: '6px',

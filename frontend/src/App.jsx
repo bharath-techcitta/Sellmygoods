@@ -14,7 +14,9 @@ import RequisitionList from './pages/admin/RequisitionList';
 import RequisitionDetail from './pages/admin/RequisitionDetail';
 import BidList from './pages/admin/BidList';
 import BidDetail from './pages/admin/BidDetail';
+import PurchaseOrderList from './pages/admin/PurchaseOrderList';
 import PurchaseOrderDetail from './pages/admin/PurchaseOrderDetail';
+import RouteFallback from './components/RouteFallback';
 import InvoiceManagement from './pages/admin/InvoiceManagement';
 import AuctionDirectory from './pages/admin/AuctionDirectory';
 import ContractClauses from './pages/admin/ContractClauses';
@@ -31,9 +33,23 @@ import BuyerPurchaseOrders from './pages/buyer/BuyerPurchaseOrders';
 import BuyerInvoices from './pages/buyer/BuyerInvoices';
 import BuyerContracts from './pages/buyer/BuyerContracts';
 import BuyerAuctions from './pages/buyer/BuyerAuctions';
+import LiveAuctionBiddingEntry from './pages/buyer/LiveAuctionBiddingEntry';
+import LiveAuctionAdminConsole from './pages/admin/LiveAuctionAdminConsole';
 
 import { api } from './api';
 import { readDemoSession, writeDemoSession } from './demoSession';
+
+const ADMIN_ROUTES = new Set([
+  'dashboard', 'suppliers', 'supplier-detail', 'categories', 'workflows',
+  'requisitions', 'requisition-detail', 'bids', 'bid-detail',
+  'purchase-orders', 'purchase-order-detail', 'invoices', 'contracts',
+  'auctions', 'auction-monitor', 'budgets', 'integrations', 'ai-analysis',
+]);
+
+const BUYER_ROUTES = new Set([
+  'buyer-dashboard', 'registration-wizard', 'buyer-bids', 'buyer-bid-response',
+  'buyer-pos', 'buyer-invoices', 'buyer-contracts', 'buyer-auctions', 'buyer-auction-console', 'buyer-profile',
+]);
 
 export default function App() {
   const [activePortal, setActivePortal] = useState('admin'); // 'admin' or 'buyer'
@@ -46,6 +62,7 @@ export default function App() {
   const [selectedPrId, setSelectedPrId] = useState(1);
   const [selectedEventId, setSelectedEventId] = useState(1);
   const [selectedPoId, setSelectedPoId] = useState(1);
+  const [selectedAuctionId, setSelectedAuctionId] = useState(null);
 
   useEffect(() => {
     const saved = readDemoSession();
@@ -128,6 +145,10 @@ export default function App() {
                   prId={selectedPrId}
                   onBack={() => navigateTo('requisitions')}
                   navigateTo={navigateTo}
+                  onPoCreated={(id) => {
+                    setSelectedPoId(id);
+                    navigateTo('purchase-order-detail');
+                  }}
                 />
               )}
               {currentRoute === 'bids' && (
@@ -144,18 +165,42 @@ export default function App() {
                 />
               )}
               {currentRoute === 'purchase-orders' && (
+                <PurchaseOrderList
+                  navigateTo={navigateTo}
+                  onSelectPO={(id) => setSelectedPoId(id)}
+                />
+              )}
+              {currentRoute === 'purchase-order-detail' && (
                 <PurchaseOrderDetail
                   poId={selectedPoId}
-                  onBack={() => navigateTo('dashboard')}
+                  onBack={() => navigateTo('purchase-orders')}
                   navigateTo={navigateTo}
                 />
               )}
               {currentRoute === 'invoices' && <InvoiceManagement />}
               {currentRoute === 'contracts' && <ContractClauses />}
-              {currentRoute === 'auctions' && <AuctionDirectory />}
+              {currentRoute === 'auctions' && (
+                <AuctionDirectory
+                  navigateTo={navigateTo}
+                  onSelectAuction={(id) => setSelectedAuctionId(id)}
+                />
+              )}
+              {currentRoute === 'auction-monitor' && (
+                selectedAuctionId != null ? (
+                  <LiveAuctionAdminConsole
+                    auctionId={selectedAuctionId}
+                    onBack={() => navigateTo('auctions')}
+                  />
+                ) : (
+                  <RouteFallback navigateTo={navigateTo} portal="admin" />
+                )
+              )}
               {currentRoute === 'budgets' && <BudgetSpendReports />}
               {currentRoute === 'integrations' && <IntegrationsErp />}
               {currentRoute === 'ai-analysis' && <AiAnalysisDashboard />}
+              {!ADMIN_ROUTES.has(currentRoute) && (
+                <RouteFallback navigateTo={navigateTo} portal="admin" />
+              )}
             </>
           )}
 
@@ -164,7 +209,11 @@ export default function App() {
             <>
               {currentRoute === 'buyer-dashboard' && <BuyerDashboard navigateTo={navigateTo} />}
               {currentRoute === 'registration-wizard' && (
-                <SupplierRegistrationWizard onComplete={() => navigateTo('buyer-dashboard')} />
+                <SupplierRegistrationWizard
+                  onComplete={() => {
+                    navigateTo('buyer-dashboard');
+                  }}
+                />
               )}
               {currentRoute === 'buyer-bids' && (
                 <BuyerBidList
@@ -182,9 +231,27 @@ export default function App() {
               {currentRoute === 'buyer-pos' && <BuyerPurchaseOrders navigateTo={navigateTo} />}
               {currentRoute === 'buyer-invoices' && <BuyerInvoices />}
               {currentRoute === 'buyer-contracts' && <BuyerContracts />}
-              {currentRoute === 'buyer-auctions' && <BuyerAuctions />}
+              {currentRoute === 'buyer-auctions' && (
+                <BuyerAuctions
+                  navigateTo={navigateTo}
+                  onSelectAuction={(id) => setSelectedAuctionId(id)}
+                />
+              )}
+              {currentRoute === 'buyer-auction-console' && (
+                selectedAuctionId != null ? (
+                  <LiveAuctionBiddingEntry
+                    auctionId={selectedAuctionId}
+                    onBack={() => navigateTo('buyer-auctions')}
+                  />
+                ) : (
+                  <RouteFallback navigateTo={navigateTo} portal="buyer" />
+                )
+              )}
               {currentRoute === 'buyer-profile' && (
                 <SupplierDetail supplierId={1} onBack={() => navigateTo('buyer-dashboard')} />
+              )}
+              {!BUYER_ROUTES.has(currentRoute) && (
+                <RouteFallback navigateTo={navigateTo} portal="buyer" />
               )}
             </>
           )}

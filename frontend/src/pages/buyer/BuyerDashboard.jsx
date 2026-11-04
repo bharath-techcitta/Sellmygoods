@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
 import MetricCard from '../../components/MetricCard';
+import { isChartsEnabled } from '../../components/charts/chartsEnabled';
+import BuyerDashboardCharts from '../../components/charts/BuyerDashboardCharts';
+import CompletionProgressRing from '../../components/CompletionProgressRing';
+import { readSupplierWizardProgress } from '../../utils/supplierWizardProgress';
 
 const defaultSupplierEvents = [
   {
@@ -17,6 +21,11 @@ const defaultSupplierEvents = [
 
 export default function BuyerDashboard({ navigateTo }) {
   const [events, setEvents] = useState(defaultSupplierEvents);
+  const [wizardCompletion, setWizardCompletion] = useState(() => readSupplierWizardProgress().completion);
+
+  const refreshWizardProgress = () => {
+    setWizardCompletion(readSupplierWizardProgress().completion);
+  };
 
   useEffect(() => {
     api.getSupplierEvents()
@@ -24,6 +33,18 @@ export default function BuyerDashboard({ navigateTo }) {
         if (res && res.length) setEvents(res);
       })
       .catch(console.error);
+    refreshWizardProgress();
+    const onStorage = (e) => {
+      if (e.key === 'procurio_supplier_wizard_progress') refreshWizardProgress();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', refreshWizardProgress);
+    window.addEventListener('procurio-wizard-progress', refreshWizardProgress);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', refreshWizardProgress);
+      window.removeEventListener('procurio-wizard-progress', refreshWizardProgress);
+    };
   }, []);
 
   return (
@@ -43,22 +64,28 @@ export default function BuyerDashboard({ navigateTo }) {
             Manage invited tender quotations, purchase orders, milestone invoices, and corporate onboarding
           </p>
         </div>
-        <button
-          onClick={() => navigateTo('registration-wizard')}
-          style={{
-            padding: '9px 16px',
-            backgroundColor: '#432177',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: '600',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}
-        >
-          🚀 Registration Profile Wizard (83%)
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <CompletionProgressRing targetPercent={wizardCompletion} size={48} durationMs={700} />
+          <button
+            type="button"
+            onClick={() => navigateTo('registration-wizard')}
+            style={{
+              padding: '9px 16px',
+              backgroundColor: '#432177',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            🚀 Registration Profile Wizard ({wizardCompletion}%)
+          </button>
+        </div>
       </div>
+
+      {isChartsEnabled() && <BuyerDashboardCharts events={events} />}
 
       {/* Top 4 Operational Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '18px', marginBottom: '24px' }}>

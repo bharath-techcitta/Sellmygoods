@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
+import { isChartsEnabled } from '../../components/charts/chartsEnabled';
+import BudgetSpendCharts from '../../components/charts/BudgetSpendCharts';
 
 const defaultBudgets = [
   { id: 1, fiscal_period: 'FY 2026-2027', department: 'Information Technology', cost_centre: 'CC-1020-IT', approved_budget: 350000.0, adjustments: 0.0, pr_reserved: 32000.0, po_committed: 85000.0, invoiced_actuals: 64000.0, available_balance: 169000.0 },
@@ -93,6 +95,8 @@ export default function BudgetSpendReports() {
           <div style={{ fontSize: '11px', color: '#0f9d78', fontWeight: '600', marginTop: '2px' }}>✓ AP settlement confirmed</div>
         </div>
       </div>
+
+      {isChartsEnabled() && <BudgetSpendCharts budgets={budgets} analytics={analytics} />}
 
       {/* Department Budget Ledger Table (Image 1, E16) */}
       <div className="card-enterprise" style={{ overflow: 'hidden', marginBottom: '24px' }}>

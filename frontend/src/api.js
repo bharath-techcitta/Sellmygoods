@@ -65,6 +65,17 @@ export const api = {
   getSupplierDetail: (id) => request(`/suppliers/${id}`),
   inviteSupplier: (data) => request('/suppliers/invite', { method: 'POST', body: JSON.stringify(data) }),
 
+  getCategories: () => request('/categories'),
+  getItems: (category_id = '', search = '') => {
+    const params = new URLSearchParams();
+    if (category_id) params.set('category_id', String(category_id));
+    if (search) params.set('search', search);
+    const q = params.toString();
+    return request(`/items${q ? `?${q}` : ''}`);
+  },
+  createCategory: (data) => request('/categories', { method: 'POST', body: JSON.stringify(data) }),
+  createItem: (data) => request('/items', { method: 'POST', body: JSON.stringify(data) }),
+
   // Requisitions
   getRequisitions: (status = '', search = '') =>
     request(`/requisitions?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
@@ -98,7 +109,16 @@ export const api = {
 
   // Auctions
   getAuctions: () => request('/auctions'),
-  placeAuctionBid: (id, bid_amount) => request(`/auctions/${id}/bid`, { method: 'POST', body: JSON.stringify({ bid_amount }) }),
+  getAuction: (id) => request(`/auctions/${id}`),
+  createAuction: (data) => request('/auctions', { method: 'POST', body: JSON.stringify(data) }),
+  updateAuction: (id, data) => request(`/auctions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  getAuctionLiveConsole: (id) => request(`/auctions/${id}/live-console`),
+  getAuctionMonitor: (id) => request(`/auctions/${id}/monitor`),
+  placeAuctionBid: (id, payload) =>
+    request(`/auctions/${id}/bid`, {
+      method: 'POST',
+      body: JSON.stringify(typeof payload === 'number' ? { bid_amount: payload } : payload),
+    }),
 
   // Contracts & Clauses
   getContracts: () => request('/contracts'),

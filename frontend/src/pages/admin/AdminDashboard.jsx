@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
 import MetricCard from '../../components/MetricCard';
 import StatusBadge from '../../components/StatusBadge';
-
 export default function AdminDashboard({ navigateTo }) {
   const [metrics, setMetrics] = useState({
     top_metrics: { total_users: 1248, active_org_users: 842, supplier_users: 406 },
@@ -230,9 +229,10 @@ export default function AdminDashboard({ navigateTo }) {
                 </div>
                 <button
                   onClick={() => {
-                    if (task.module.includes('Supplier')) navigateTo('suppliers');
-                    else if (task.module.includes('Invoice')) navigateTo('invoices');
-                    else if (task.module.includes('Bid')) navigateTo('bids');
+                    const mod = task.module || task.title || '';
+                    if (mod.includes('Supplier')) navigateTo('suppliers');
+                    else if (mod.includes('Invoice')) navigateTo('invoices');
+                    else if (mod.includes('Bid') || mod.includes('RFQ')) navigateTo('bids');
                     else navigateTo('requisitions');
                   }}
                   style={{

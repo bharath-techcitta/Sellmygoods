@@ -7,6 +7,7 @@ Usage (from project root):
 from __future__ import annotations
 
 import os
+import time
 
 os.environ.setdefault("PYTHONUNBUFFERED", "1")
 
@@ -22,7 +23,14 @@ from backend.env_loader import load_project_env
 load_project_env()
 
 from backend.database import DATABASE_URL, SessionLocal  # noqa: E402
-from backend.models import Supplier, Requisition, PurchaseOrder, Invoice  # noqa: E402
+from backend.models import (  # noqa: E402
+    Supplier,
+    Requisition,
+    PurchaseOrder,
+    Invoice,
+    Auction,
+    AuctionLineItem,
+)
 from backend.seed import seed_database  # noqa: E402
 
 
@@ -34,6 +42,22 @@ def _mask_url(url: str) -> str:
             user = creds.split(":")[0] if ":" in creds else creds
             return f"{prefix}://{user}:****@{host}"
     return url[:40] + "..." if len(url) > 40 else url
+
+
+def _run_seed_with_retries(force: bool, attempts: int = 3) -> None:
+    last_err = None
+    for attempt in range(1, attempts + 1):
+        try:
+            seed_database(force=force)
+            return
+        except Exception as e:
+            last_err = e
+            print(f"Seed attempt {attempt}/{attempts} failed: {e}")
+            if attempt < attempts:
+                wait = 5 * attempt
+                print(f"Retrying in {wait}s…")
+                time.sleep(wait)
+    raise last_err
 
 
 def main() -> int:
@@ -51,7 +75,7 @@ def main() -> int:
 
     print(f"Target database: {_mask_url(DATABASE_URL)}")
 
-    seed_database(force=args.force)
+    _run_seed_with_retries(force=args.force)
 
     db = SessionLocal()
     try:
@@ -60,8 +84,15 @@ def main() -> int:
             "requisitions": db.query(Requisition).count(),
             "purchase_orders": db.query(PurchaseOrder).count(),
             "invoices": db.query(Invoice).count(),
+            "auctions": db.query(Auction).count(),
+            "auction_lines": db.query(AuctionLineItem).count(),
         }
         print("Neon seed complete. Row counts:", summary)
+        live = db.query(Auction).filter(Auction.auction_number == "AUC_2026_013").first()
+        if live:
+            print(f"Live reverse auction: {live.auction_number} (id={live.id}, status={live.status})")
+        else:
+            print("Note: AUC_2026_013 not found — restart backend or run push again for supplemental auction.")
     finally:
         db.close()
 

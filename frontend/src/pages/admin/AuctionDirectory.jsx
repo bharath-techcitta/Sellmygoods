@@ -1,226 +1,205 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
+import AuctionCreatePanel from './AuctionCreatePanel';
 
-const defaultAuctions = [
-  {
-    id: 1,
-    auction_number: 'AUC_2026_011',
-    title: 'Surplus Automated Factory Machining Center & Robotic Arms',
-    auction_type: 'Forward Disposal',
-    status: 'Live',
-    pr_number: 'PR_00078',
-    current_approver: 'Disposal Officer',
-    reserve_price: 45000.0,
-    min_decrement: 500.0,
-    current_best_bid: 52000.0,
-    total_bids_placed: 18,
-    currency: 'USD'
-  },
-  {
-    id: 2,
-    auction_number: 'AUC_2026_012',
-    title: 'Bulk Packaging Cardboard Corrugated Boxes Q1 Lot',
-    auction_type: 'Reverse Sourcing',
-    status: 'Scheduled',
-    pr_number: 'PR_00080',
-    current_approver: 'Marcus Vance',
-    reserve_price: 28000.0,
-    min_decrement: 200.0,
-    current_best_bid: 28000.0,
-    total_bids_placed: 0,
-    currency: 'USD'
+function fmtMoney(auc) {
+  if (auc.currency === 'INR') {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(auc.current_best_bid);
   }
-];
+  return `$${auc.current_best_bid?.toLocaleString()}`;
+}
 
-export default function AuctionDirectory() {
-  const [auctions, setAuctions] = useState(defaultAuctions);
-  const [selectedAuction, setSelectedAuction] = useState(defaultAuctions[0]);
-  const [bidInput, setBidInput] = useState('');
-  const [bidSuccess, setBidSuccess] = useState('');
+export default function AuctionDirectory({ navigateTo, onSelectAuction }) {
+  const [auctions, setAuctions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [actionId, setActionId] = useState(null);
+  const [showArchive, setShowArchive] = useState(false);
+
+  const loadAuctions = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.getAuctions();
+      setAuctions(Array.isArray(res) ? res : []);
+    } catch (e) {
+      console.error(e);
+      setError(e.message || 'Could not load auctions from the API.');
+      setAuctions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadAuctions();
-  }, []);
+    const poll = setInterval(loadAuctions, 15000);
+    return () => clearInterval(poll);
+  }, [loadAuctions]);
 
-  const loadAuctions = async () => {
-    try {
-      const res = await api.getAuctions();
-      if (res && res.length) {
-        setAuctions(res);
-        setSelectedAuction((prev) => res.find((a) => a.id === prev?.id) || res[0]);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const openMonitor = (auc) => {
+    onSelectAuction?.(auc.id);
+    navigateTo?.('auction-monitor');
   };
 
-  const handlePlaceBid = async (e) => {
-    e.preventDefault();
-    if (!bidInput || !selectedAuction) return;
-    const amount = parseFloat(bidInput);
-    if (Number.isNaN(amount)) {
-      alert('Enter a valid bid amount.');
-      return;
-    }
+  const goLive = async (auc) => {
+    setActionId(auc.id);
     try {
-      const res = await api.placeAuctionBid(selectedAuction.id, amount);
-      setBidSuccess(res.message || `Bid of $${amount.toLocaleString()} accepted.`);
-      setBidInput('');
+      await api.updateAuction(auc.id, { status: 'Live', duration_hours: 2 });
       await loadAuctions();
-    } catch (err) {
-      alert(err.message || 'Bid submission rejected');
+    } catch (e) {
+      alert(e.message || 'Could not start auction');
+    } finally {
+      setActionId(null);
     }
   };
 
-  const bidHint =
-    selectedAuction?.auction_type === 'Reverse Sourcing'
-      ? `Enter less than $${Number(selectedAuction.current_best_bid).toLocaleString()} (e.g. ${Math.max(0, selectedAuction.current_best_bid - selectedAuction.min_decrement).toLocaleString()})`
-      : `Enter more than $${Number(selectedAuction?.current_best_bid || 0).toLocaleString()} (e.g. ${(selectedAuction.current_best_bid + selectedAuction.min_decrement).toLocaleString()})`;
+  const closeAuction = async (auc) => {
+    setActionId(auc.id);
+    try {
+      await api.updateAuction(auc.id, { status: 'Closed' });
+      await loadAuctions();
+    } catch (e) {
+      alert(e.message || 'Could not close auction');
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const live = auctions.filter((a) => a.status === 'Live');
+  const scheduled = auctions.filter((a) => a.status === 'Scheduled');
+  const archive = auctions.filter((a) => !['Live', 'Scheduled'].includes(a.status));
 
   return (
     <div>
-      {/* Header (Image 14) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#242424' }}>
-            Live Procurement & Disposal Auctions
-          </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>
-            Reverse auctions for competitive dynamic cost reduction and forward auctions for asset disposal
+          <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Procurement & Disposal Auctions</h1>
+          <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
+            Create lots, go live, monitor bids, and manage supplier consoles
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          style={{ padding: '10px 18px', background: showCreate ? '#73767b' : '#432177', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}
+        >
+          {showCreate ? 'Hide form' : '+ Create auction'}
+        </button>
       </div>
 
-      {bidSuccess && (
-        <div style={{ padding: '10px 16px', backgroundColor: '#d1fae8', color: '#0f9d78', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', fontWeight: '600' }}>
-          ✓ {bidSuccess}
+      {showCreate && (
+        <AuctionCreatePanel
+          onCancel={() => setShowCreate(false)}
+          onCreated={() => {
+            setShowCreate(false);
+            loadAuctions();
+          }}
+        />
+      )}
+
+      {error && (
+        <div className="card-enterprise" style={{ padding: 16, marginBottom: 16, background: '#fee2e2', color: '#c32e3b', fontSize: 13 }}>
+          {error}
+          <button type="button" onClick={loadAuctions} style={{ marginLeft: 12, padding: '6px 12px', border: '1px solid #c32e3b', borderRadius: 6, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+            Retry
+          </button>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '20px' }}>
-        {/* Auctions List (Image 14) */}
-        <div className="card-enterprise" style={{ overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid #e6e6e9', fontWeight: '700', fontSize: '15px' }}>
-            Active Auction Lots ({auctions.length})
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {auctions.map((auc) => {
-              const isSelected = selectedAuction?.id === auc.id;
-              return (
-                <div
-                  key={auc.id}
-                  onClick={() => {
-                    setSelectedAuction(auc);
-                    setBidSuccess('');
-                  }}
-                  style={{
-                    padding: '16px',
-                    borderBottom: '1px solid #f1f1f4',
-                    cursor: 'pointer',
-                    backgroundColor: isSelected ? '#faf5ff' : '#ffffff',
-                    borderLeft: isSelected ? '4px solid #432177' : '4px solid transparent',
-                    transition: 'all 0.15s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '700', color: '#432177', fontSize: '14px' }}>
-                      {auc.auction_number}
-                    </span>
+      {loading ? (
+        <div className="card-enterprise" style={{ padding: 24, color: '#73767b' }}>Loading auctions…</div>
+      ) : (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Live auctions ({live.length})</h3>
+          {live.length === 0 ? (
+            <div className="card-enterprise" style={{ padding: 24, marginBottom: 24, textAlign: 'center', color: '#73767b' }}>
+              No live auctions. Create one above or go live on a scheduled lot.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 14, marginBottom: 24 }}>
+              {live.map((auc) => (
+                <div key={auc.id} className="card-enterprise" style={{ padding: 18, border: '2px solid #432177' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <strong style={{ color: '#432177' }}>{auc.auction_number}</strong>
                     <StatusBadge status={auc.status} />
                   </div>
-                  <div style={{ fontWeight: '600', fontSize: '13.5px', color: '#242424', marginTop: '4px' }}>
-                    {auc.title}
-                  </div>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#73767b', marginTop: '6px' }}>
-                    <span>Type: <strong>{auc.auction_type}</strong></span>
-                    <span>Bids: <strong>{auc.total_bids_placed}</strong></span>
-                    <span>Current Best: <strong style={{ color: '#0f9d78' }}>${auc.current_best_bid?.toLocaleString()}</strong></span>
+                  <div style={{ fontWeight: 600, marginTop: 8 }}>{auc.title}</div>
+                  <div style={{ fontSize: 12, color: '#73767b', marginTop: 6 }}>{auc.auction_type}</div>
+                  <div style={{ fontSize: 12, color: '#73767b', marginTop: 8 }}>Best: {fmtMoney(auc)} · Bids: {auc.total_bids_placed ?? 0}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+                    <button
+                      type="button"
+                      onClick={() => openMonitor(auc)}
+                      style={{ width: '100%', padding: '10px 16px', background: '#432177', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Open live auction console →
+                    </button>
+                    <button
+                      type="button"
+                      disabled={actionId === auc.id}
+                      onClick={() => closeAuction(auc)}
+                      style={{ width: '100%', padding: '8px 16px', background: '#fff', color: '#73767b', border: '1px solid #e6e6e9', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Close lot
+                    </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Live Bidding Console */}
-        {selectedAuction && (
-          <div className="card-enterprise" style={{ padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#242424' }}>
-                  Live Bidding Console
-                </h3>
-                <span style={{ fontSize: '12px', color: '#73767b' }}>
-                  Lot: {selectedAuction.auction_number} • {selectedAuction.auction_type}
-                </span>
-              </div>
-              <span style={{ backgroundColor: selectedAuction.status === 'Live' ? '#f0e5ff' : '#fff0d8', color: selectedAuction.status === 'Live' ? '#432177' : '#b65c16', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '700' }}>
-                {selectedAuction.status === 'Live' ? '⚡ LIVE STREAM ACTIVE' : `⏱ ${selectedAuction.status}`}
-              </span>
+              ))}
             </div>
+          )}
 
-            {/* Current Best Price Card */}
-            <div style={{ backgroundColor: '#f9f9fb', border: '1px solid #e6e6e9', borderRadius: '10px', padding: '18px', textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '13px', color: '#73767b' }}>Current Winning Bid Benchmark</div>
-              <div style={{ fontSize: '32px', fontWeight: '800', color: '#432177', margin: '6px 0' }} className="font-mono-numbers">
-                ${selectedAuction.current_best_bid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {scheduled.length > 0 && (
+            <>
+              <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Scheduled ({scheduled.length})</h3>
+              <div className="card-enterprise" style={{ overflow: 'hidden', marginBottom: 24 }}>
+                {scheduled.map((auc) => (
+                  <div key={auc.id} style={{ padding: 16, borderBottom: '1px solid #f1f1f4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <strong>{auc.auction_number}</strong> — {auc.title}
+                      <div style={{ fontSize: 12, color: '#73767b' }}>{auc.auction_type} · Opening {fmtMoney(auc)}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <StatusBadge status={auc.status} />
+                      <button
+                        type="button"
+                        disabled={actionId === auc.id}
+                        onClick={() => goLive(auc)}
+                        style={{ padding: '6px 12px', background: '#432177', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontSize: 12 }}
+                      >
+                        Go live
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div style={{ fontSize: '12px', color: '#555' }}>
-                Reserve Ceiling: ${selectedAuction.reserve_price?.toLocaleString()} • Min Tick: ${selectedAuction.min_decrement}
-              </div>
-            </div>
+            </>
+          )}
 
-            {/* Place New Bid Form */}
-            <form onSubmit={handlePlaceBid} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{ fontSize: '13px', fontWeight: '600', color: '#242424' }}>
-                Place Competitive Bid Amount ($ USD)
-              </label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  type="number"
-                  step="50"
-                  placeholder={
-                    selectedAuction.auction_type === 'Reverse Sourcing'
-                      ? `Must be < $${selectedAuction.current_best_bid}`
-                      : `Must be > $${selectedAuction.current_best_bid}`
-                  }
-                  value={bidInput}
-                  onChange={(e) => setBidInput(e.target.value)}
-                  style={{
-                    flex: 1,
-                    height: '42px',
-                    padding: '0 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #e6e6e9',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-                <button
-                  type="submit"
-                  style={{
-                    padding: '0 20px',
-                    backgroundColor: '#432177',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontWeight: '700',
-                    fontSize: '13.5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Submit Bid
-                </button>
-              </div>
-              <p style={{ margin: 0, fontSize: '11.5px', color: '#73767b' }}>
-                {bidHint}. Bids are time-stamped; anti-sniping extends close by 3 minutes on late bids.
-              </p>
-            </form>
-          </div>
-        )}
-      </div>
+          {archive.length > 0 && (
+            <>
+              <button type="button" onClick={() => setShowArchive((v) => !v)} style={{ marginBottom: 12, padding: '8px 14px', border: '1px solid #e6e6e9', borderRadius: 6, background: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+                {showArchive ? 'Hide' : 'Show'} closed archive ({archive.length})
+              </button>
+              {showArchive && (
+                <div className="card-enterprise" style={{ overflow: 'hidden' }}>
+                  {archive.map((auc) => (
+                    <div key={auc.id} style={{ padding: 16, borderBottom: '1px solid #f1f1f4', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <strong>{auc.auction_number}</strong> — {auc.title}
+                        <div style={{ fontSize: 12, color: '#73767b' }}>{auc.auction_type} · {fmtMoney(auc)} · Bids: {auc.total_bids_placed}</div>
+                      </div>
+                      <StatusBadge status={auc.status} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
-

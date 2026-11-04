@@ -46,21 +46,64 @@ const defaultPrData = {
   ]
 };
 
-export default function RequisitionDetail({ prId = 1, onBack, navigateTo }) {
-  const [data, setData] = useState(defaultPrData);
+export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreated }) {
+  const isCreate = prId == null;
+  const [data, setData] = useState(isCreate ? null : defaultPrData);
+  const [loading, setLoading] = useState(!isCreate);
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
+  const [createForm, setCreateForm] = useState({
+    description: '',
+    department: 'Information Technology',
+    delivery_date: '2026-12-01',
+    destination: 'Headquarters, Austin TX',
+    line_description: 'General procurement line item',
+    quantity: 1,
+    unit_price: 1000,
+  });
 
   useEffect(() => {
+    if (isCreate) {
+      setLoading(false);
+      return;
+    }
     loadDetail();
-  }, [prId]);
+  }, [prId, isCreate]);
 
   const loadDetail = async () => {
+    setLoading(true);
     try {
-      const res = await api.getRequisitionDetail(prId || 1);
+      const res = await api.getRequisitionDetail(prId);
       if (res && res.requisition) setData(res);
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePR = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.createRequisition({
+        description: createForm.description,
+        department: createForm.department,
+        delivery_date: createForm.delivery_date,
+        destination: createForm.destination,
+        lines: [{
+          description: createForm.line_description,
+          category: 'General',
+          quantity: Number(createForm.quantity),
+          unit_price: Number(createForm.unit_price),
+          uom: 'Unit',
+        }],
+      });
+      if (res?.requisition?.id) {
+        navigateTo('requisitions');
+        alert(`Created ${res.requisition.pr_number} successfully.`);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to create PR');
     }
   };
 
@@ -70,7 +113,7 @@ export default function RequisitionDetail({ prId = 1, onBack, navigateTo }) {
 
   const handleSubmitPR = async () => {
     try {
-      await api.submitRequisition(prId || 1);
+      await api.submitRequisition(prId);
       setActionMessage("Requisition submitted for approval workflow.");
       loadDetail();
     } catch (e) {
@@ -80,16 +123,67 @@ export default function RequisitionDetail({ prId = 1, onBack, navigateTo }) {
 
   const handleDirectPO = async () => {
     try {
-      const res = await api.convertRequisition(prId || 1, 'po', 1);
+      const res = await api.convertRequisition(prId, 'po', 1);
       alert(`Requisition successfully converted to Direct Purchase Order: ${res.po_number}`);
-      navigateTo('purchase-orders');
+      if (onPoCreated && res.id) onPoCreated(res.id);
+      else navigateTo('purchase-orders');
     } catch (e) {
       alert(e.message || "Conversion failed");
     }
   };
 
-  if (loading || !data) {
+  if (loading) {
     return <div style={{ padding: '30px' }}>Loading Requisition Detail...</div>;
+  }
+
+  if (isCreate) {
+    return (
+      <div>
+        <button onClick={onBack} style={{ marginBottom: '16px', padding: '8px 14px', border: '1px solid #e6e6e9', borderRadius: '6px', background: '#fff', cursor: 'pointer' }}>
+          ← Back to PR List
+        </button>
+        <h1 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '16px' }}>Create Purchase Requisition</h1>
+        <form onSubmit={handleCreatePR} className="card-enterprise" style={{ padding: '24px', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ fontWeight: '600', fontSize: '13px' }}>Description *</label>
+            <input required value={createForm.description} onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+          </div>
+          <div>
+            <label style={{ fontWeight: '600', fontSize: '13px' }}>Department</label>
+            <input value={createForm.department} onChange={(e) => setCreateForm({ ...createForm, department: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+          </div>
+          <div>
+            <label style={{ fontWeight: '600', fontSize: '13px' }}>Destination</label>
+            <input value={createForm.destination} onChange={(e) => setCreateForm({ ...createForm, destination: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+          </div>
+          <div>
+            <label style={{ fontWeight: '600', fontSize: '13px' }}>Delivery date</label>
+            <input type="date" value={createForm.delivery_date} onChange={(e) => setCreateForm({ ...createForm, delivery_date: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+          </div>
+          <div>
+            <label style={{ fontWeight: '600', fontSize: '13px' }}>Line item description</label>
+            <input value={createForm.line_description} onChange={(e) => setCreateForm({ ...createForm, line_description: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontWeight: '600', fontSize: '13px' }}>Quantity</label>
+              <input type="number" min="1" value={createForm.quantity} onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+            </div>
+            <div>
+              <label style={{ fontWeight: '600', fontSize: '13px' }}>Unit price (USD)</label>
+              <input type="number" min="0" step="0.01" value={createForm.unit_price} onChange={(e) => setCreateForm({ ...createForm, unit_price: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+            </div>
+          </div>
+          <button type="submit" style={{ marginTop: '8px', padding: '10px 18px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
+            Save Draft PR
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <div style={{ padding: '30px' }}>Requisition not found.</div>;
   }
 
   const pr = data.requisition;
