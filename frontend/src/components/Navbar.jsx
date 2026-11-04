@@ -1,12 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { api } from '../api';
 
-export default function Navbar({ activePortal, currentRole, onSwitchRole, toggleSidebar, isSidebarCollapsed }) {
+const defaultAdminNotifications = [
+  { id: 'd1', title: 'Approve PR: High Pressure Ball Valves', message: 'Purchase Request • PR_00085 • Due 2026-11-06', time: '2026-11-06', priority: 'Medium', route: 'requisitions', module: 'Purchase Request' },
+  { id: 'd2', title: '3-Way Matched Invoice Review: Precision Components Ltd', message: 'Invoice • INV_99214 • Due 2026-11-04', time: '2026-11-04', priority: 'Urgent', route: 'invoices', module: 'Invoice' },
+  { id: 'd3', title: 'Review Onboarding: TechVibe Cloud Systems Corp', message: 'Supplier Registration • SUP_00103', time: 'Today', priority: 'High', route: 'suppliers', module: 'Supplier Registration' },
+  { id: 'd4', title: 'Award Evaluation & Commercial Recommendation', message: 'Bid Award • RFQ_2026_091', time: '2026-11-07', priority: 'High', route: 'bids', module: 'Bid Award' },
+];
+
+const defaultBuyerNotifications = [
+  { id: 'b1', title: 'RFQ invitation: RFQ_2026_092', message: 'High Pressure Industrial Ball Valves Replacement', time: 'Awaiting your response', priority: 'High', route: 'buyer-bids', module: 'Bid' },
+  { id: 'b2', title: 'Quote under review — RFQ_2026_091', message: 'Your submission status: Submitted. Net quote $36,000.00.', time: 'Updated recently', priority: 'Medium', route: 'buyer-bids', module: 'Bid' },
+  { id: 'b3', title: 'Live auction lot open', message: '1 auction(s) accepting competitive bids now.', time: 'Live now', priority: 'Urgent', route: 'buyer-auctions', module: 'Auction' },
+];
+
+function priorityColor(priority) {
+  if (priority === 'Urgent') return '#c32e3b';
+  if (priority === 'High') return '#b65c16';
+  if (priority === 'Medium') return '#432177';
+  return '#73767b';
+}
+
+export default function Navbar({
+  activePortal,
+  currentRole,
+  onSwitchRole,
+  toggleSidebar,
+  onNavigate,
+}) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState(
+    currentRole === 'supplier_user' ? defaultBuyerNotifications : defaultAdminNotifications
+  );
+  const [unreadCount, setUnreadCount] = useState(notifications.length);
 
   const roles = [
     { role: 'procurement_buyer', portal: 'admin', label: 'Marcus Vance (Procurement Buyer)' },
     { role: 'supplier_user', portal: 'buyer', label: 'Elena Rostova (Precision Components - Supplier)' },
   ];
+
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await api.getNotifications();
+      if (res?.items?.length) {
+        setNotifications(res.items);
+        setUnreadCount(res.unread_count ?? res.items.length);
+      } else if (res?.items) {
+        setNotifications(currentRole === 'supplier_user' ? defaultBuyerNotifications : defaultAdminNotifications);
+        setUnreadCount((currentRole === 'supplier_user' ? defaultBuyerNotifications : defaultAdminNotifications).length);
+      }
+    } catch (e) {
+      console.error(e);
+      const fallback = currentRole === 'supplier_user' ? defaultBuyerNotifications : defaultAdminNotifications;
+      setNotifications(fallback);
+      setUnreadCount(fallback.length);
+    }
+  }, [currentRole]);
+
+  useEffect(() => {
+    loadNotifications();
+    const timer = setInterval(loadNotifications, 60000);
+    return () => clearInterval(timer);
+  }, [loadNotifications, currentRole, activePortal]);
+
+  const handleNotificationClick = (item) => {
+    setShowNotifications(false);
+    if (item.route && onNavigate) {
+      onNavigate(item.route);
+    }
+  };
 
   return (
     <header
@@ -20,7 +83,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
         padding: '0 24px',
         position: 'sticky',
         top: 0,
-        zIndex: 40
+        zIndex: 40,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -34,16 +97,15 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
             borderRadius: '6px',
             color: '#73767b',
             display: 'flex',
-            alignItems: 'center'
+            alignItems: 'center',
           }}
           title="Toggle Sidebar"
         >
           <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        {/* Portal Identifier Pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
@@ -55,7 +117,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
               fontWeight: '600',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
             }}
           >
             <span
@@ -63,7 +125,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
                 width: '8px',
                 height: '8px',
                 borderRadius: '50%',
-                backgroundColor: activePortal === 'admin' ? '#432177' : '#0284c7'
+                backgroundColor: activePortal === 'admin' ? '#432177' : '#0284c7',
               }}
             />
             {activePortal === 'admin' ? 'Admin Portal' : 'Buyer Portal'}
@@ -75,7 +137,6 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-        {/* Global Search Bar */}
         <div style={{ position: 'relative' }}>
           <input
             type="text"
@@ -88,7 +149,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
               border: '1px solid #e6e6e9',
               fontSize: '13px',
               outline: 'none',
-              backgroundColor: '#f7f7f8'
+              backgroundColor: '#f7f7f8',
             }}
           />
           <svg
@@ -99,43 +160,145 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
 
-        {/* Notification Bell */}
-        <div style={{ position: 'relative', cursor: 'pointer', color: '#555' }}>
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-          </svg>
-          <span
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#c32e3b',
-              color: '#fff',
-              fontSize: '10px',
-              borderRadius: '10px',
-              padding: '1px 5px',
-              fontWeight: '700'
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              setShowProfileMenu(false);
+              if (!showNotifications) loadNotifications();
             }}
+            style={{
+              position: 'relative',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#555',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+            }}
+            title="Notifications"
           >
-            4
-          </span>
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  backgroundColor: '#c32e3b',
+                  color: '#fff',
+                  fontSize: '10px',
+                  borderRadius: '10px',
+                  padding: '1px 5px',
+                  fontWeight: '700',
+                  minWidth: '16px',
+                  textAlign: 'center',
+                }}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '36px',
+                width: '360px',
+                maxHeight: '420px',
+                overflowY: 'auto',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e6e6e9',
+                borderRadius: '8px',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                zIndex: 55,
+              }}
+            >
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderBottom: '1px solid #f1f1f4',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#242424' }}>Notifications</span>
+                <span style={{ fontSize: '11px', color: '#73767b' }}>
+                  {currentRole === 'supplier_user' ? 'Supplier workspace' : 'Procurement workspace'}
+                </span>
+              </div>
+              {notifications.length === 0 ? (
+                <div style={{ padding: '24px', textAlign: 'center', color: '#73767b', fontSize: '13px' }}>
+                  No new updates right now.
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => handleNotificationClick(n)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      border: 'none',
+                      borderBottom: '1px solid #f1f1f4',
+                      background: '#fff',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#faf5ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fff';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#242424' }}>{n.title}</span>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          color: priorityColor(n.priority),
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {n.priority}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.4 }}>{n.message}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>{n.time}</div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
-        {/* User Profile & Role Switcher */}
         <div style={{ position: 'relative' }}>
           <div
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            onClick={() => {
+              setShowProfileMenu(!showProfileMenu);
+              setShowNotifications(false);
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               cursor: 'pointer',
               padding: '4px 8px',
-              borderRadius: '6px'
+              borderRadius: '6px',
             }}
           >
             <div
@@ -149,7 +312,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: '600',
-                fontSize: '13px'
+                fontSize: '13px',
               }}
             >
               {currentRole === 'supplier_user' ? 'ER' : 'MV'}
@@ -163,7 +326,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
               </div>
             </div>
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
             </svg>
           </div>
 
@@ -179,7 +342,7 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
                 borderRadius: '8px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
                 padding: '8px 0',
-                zIndex: 50
+                zIndex: 50,
               }}
             >
               <div style={{ padding: '8px 16px', borderBottom: '1px solid #f1f1f4', fontSize: '12px', color: '#73767b', fontWeight: '600' }}>
@@ -201,13 +364,11 @@ export default function Navbar({ activePortal, currentRole, onSwitchRole, toggle
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between'
+                    justifyContent: 'space-between',
                   }}
                 >
                   <span>{r.label}</span>
-                  {currentRole === r.role && (
-                    <span style={{ color: '#0f9d78', fontSize: '14px' }}>✓</span>
-                  )}
+                  {currentRole === r.role && <span style={{ color: '#0f9d78', fontSize: '14px' }}>✓</span>}
                 </div>
               ))}
             </div>

@@ -57,6 +57,7 @@ export const api = {
   getMetrics: () => request('/dashboard/metrics'),
   getTasks: () => request('/dashboard/tasks'),
   getActivity: () => request('/dashboard/recent-activity'),
+  getNotifications: () => request('/notifications'),
 
   // Suppliers
   getSuppliers: (status = '', search = '') => 

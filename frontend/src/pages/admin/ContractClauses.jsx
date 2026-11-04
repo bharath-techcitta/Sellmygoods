@@ -1,8 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
+import StatusBadge from '../../components/StatusBadge';
+
+const defaultClauses = [
+  { id: 1, code: 'CLS-OPS-01', name: 'Force Majeure & Unforeseen Circumstances', clause_type: 'Operational', description: 'Defines performance suspension relief under severe geopolitical, weather, or regulatory disruption exceeding 14 calendar days.' },
+  { id: 2, code: 'CLS-CMP-02', name: 'Comprehensive Data Privacy & Security (GDPR/CCPA)', clause_type: 'Compliance', description: 'Binds supplier to rigorous encryption at rest and in transit, 72-hour breach notification, and strict data processing boundaries.' },
+  { id: 3, code: 'CLS-LEG-03', name: 'Mutual Non-Disclosure & Proprietary Rights', clause_type: 'Legal', description: 'Ensures absolute commercial secrecy of pricing, architecture diagrams, and internal roadmaps.' },
+  { id: 4, code: 'CLS-LEG-04', name: 'Limitation of Liability & Mutual Indemnification', clause_type: 'Legal', description: 'Caps aggregate direct damages at 2x annual contract fees while maintaining uncapped indemnity for IP infringement.' },
+  { id: 5, code: 'CLS-FIN-05', name: 'Payment Terms, Milestones & Audit Rights', clause_type: 'Financial', description: 'Standard Net 30 day settlement upon formal milestone sign-off, with annual non-intrusive accounting audit provisions.' },
+  { id: 6, code: 'CLS-OPS-06', name: 'Termination for Convenience & Transition Services', clause_type: 'Operational', description: 'Allows 30-day notice termination by the buyer with mandatory 60-day migration support at agreed rate cards.' },
+];
+
+const defaultContracts = [
+  { contract: { id: 1, contract_number: 'CTR_2026_004', title: 'Enterprise Master IT Equipment & Maintenance Agreement', contract_type: 'Master Services Agreement', start_date: '2026-01-01', end_date: '2028-12-31', status: 'Active', total_value: 250000.0, currency: 'USD' }, supplier_name: 'Precision Components Ltd' },
+  { contract: { id: 2, contract_number: 'CTR_2026_005', title: 'Global Express Freight & Regional Fulfilment SLA', contract_type: 'Logistics Framework Agreement', start_date: '2026-02-01', end_date: '2027-01-31', status: 'Active', total_value: 180000.0, currency: 'USD' }, supplier_name: 'Apex Global Logistics Inc' },
+  { contract: { id: 3, contract_number: 'CTR_2026_006', title: 'Plant Tooling & Mechanical Maintenance Master Agreement', contract_type: 'Maintenance Service Agreement', start_date: '2026-12-01', end_date: '2027-11-30', status: 'Draft', total_value: 95000.0, currency: 'USD' }, supplier_name: 'Vertex Industrial Tools Inc' },
+];
 
 export default function ContractClauses() {
-  const [clauses, setClauses] = useState([]);
+  const [clauses, setClauses] = useState(defaultClauses);
+  const [contracts, setContracts] = useState(defaultContracts);
   const [activeType, setActiveType] = useState('All');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,13 +28,17 @@ export default function ContractClauses() {
   const [newDesc, setNewDesc] = useState('');
 
   useEffect(() => {
-    loadClauses();
+    loadData();
   }, [activeType]);
 
-  const loadClauses = async () => {
+  const loadData = async () => {
     try {
-      const res = await api.getClauses(activeType);
-      setClauses(res || []);
+      const [clauseRes, contractRes] = await Promise.all([
+        api.getClauses(activeType),
+        api.getContracts(),
+      ]);
+      if (clauseRes && clauseRes.length) setClauses(clauseRes);
+      if (contractRes && contractRes.length) setContracts(contractRes);
     } catch (e) {
       console.error(e);
     } finally {
@@ -33,7 +54,7 @@ export default function ContractClauses() {
       setIsModalOpen(false);
       setNewName('');
       setNewDesc('');
-      loadClauses();
+      loadData();
     } catch (err) {
       alert(err.message || "Failed to create clause");
     }
@@ -109,6 +130,45 @@ export default function ContractClauses() {
         </div>
       </div>
 
+      {/* Active master agreements */}
+      <div className="card-enterprise" style={{ overflow: 'hidden', marginBottom: '20px' }}>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #e6e6e9', fontWeight: '700', fontSize: '15px' }}>
+          Master Agreements ({contracts.length})
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+          <thead style={{ backgroundColor: '#fcfcfd', borderBottom: '1px solid #e6e6e9', color: '#73767b' }}>
+            <tr>
+              <th style={{ padding: '12px 18px' }}>Contract #</th>
+              <th style={{ padding: '12px 18px' }}>Title</th>
+              <th style={{ padding: '12px 18px' }}>Supplier</th>
+              <th style={{ padding: '12px 18px' }}>Type</th>
+              <th style={{ padding: '12px 18px' }}>Term</th>
+              <th style={{ padding: '12px 18px' }}>Status</th>
+              <th style={{ padding: '12px 18px', textAlign: 'right' }}>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contracts.map((row) => {
+              const c = row.contract || row;
+              const supplier = row.supplier_name || '—';
+              return (
+                <tr key={c.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
+                  <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{c.contract_number}</td>
+                  <td style={{ padding: '12px 18px', fontWeight: '600' }}>{c.title}</td>
+                  <td style={{ padding: '12px 18px', color: '#555' }}>{supplier}</td>
+                  <td style={{ padding: '12px 18px', color: '#555' }}>{c.contract_type}</td>
+                  <td style={{ padding: '12px 18px', color: '#73767b' }}>{c.start_date} → {c.end_date}</td>
+                  <td style={{ padding: '12px 18px' }}><StatusBadge status={c.status} /></td>
+                  <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
+                    ${c.total_value?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {c.currency}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {/* Filter Tabs (Image 29) */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
         {types.map((t) => (
@@ -144,6 +204,11 @@ export default function ContractClauses() {
             </tr>
           </thead>
           <tbody>
+            {!loading && clauses.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ padding: '32px', textAlign: 'center', color: '#73767b' }}>No clauses in this category.</td>
+              </tr>
+            )}
             {clauses.map((c) => (
               <tr key={c.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
                 <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{c.code}</td>

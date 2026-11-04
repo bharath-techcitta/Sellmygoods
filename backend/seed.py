@@ -8,6 +8,45 @@ from .models import (
 )
 from .calculations import calculate_quote_line, calculate_composite_score
 
+DEMO_CLAUSES = [
+    {"code": "CLS-OPS-01", "name": "Force Majeure & Unforeseen Circumstances", "clause_type": "Operational", "description": "Defines performance suspension relief under severe geopolitical, weather, or regulatory disruption exceeding 14 calendar days."},
+    {"code": "CLS-CMP-02", "name": "Comprehensive Data Privacy & Security (GDPR/CCPA)", "clause_type": "Compliance", "description": "Binds supplier to rigorous encryption at rest and in transit, 72-hour breach notification, and strict data processing boundaries."},
+    {"code": "CLS-LEG-03", "name": "Mutual Non-Disclosure & Proprietary Rights", "clause_type": "Legal", "description": "Ensures absolute commercial secrecy of pricing, architecture diagrams, and internal roadmaps."},
+    {"code": "CLS-LEG-04", "name": "Limitation of Liability & Mutual Indemnification", "clause_type": "Legal", "description": "Caps aggregate direct damages at 2x annual contract fees while maintaining uncapped indemnity for IP infringement."},
+    {"code": "CLS-FIN-05", "name": "Payment Terms, Milestones & Audit Rights", "clause_type": "Financial", "description": "Standard Net 30 day settlement upon formal milestone sign-off, with annual non-intrusive accounting audit provisions."},
+    {"code": "CLS-OPS-06", "name": "Termination for Convenience & Transition Services", "clause_type": "Operational", "description": "Allows 30-day notice termination by the buyer with mandatory 60-day migration support at agreed rate cards."},
+    {"code": "CLS-CMP-07", "name": "Export Control, Sanctions & Anti-Bribery (FCPA/UK Bribery Act)", "clause_type": "Compliance", "description": "Requires screening of restricted parties, embargo compliance, and zero-tolerance gift/hospitality policies with annual attestation."},
+    {"code": "CLS-FIN-08", "name": "Early Payment Discount & Volume Rebate Schedule", "clause_type": "Financial", "description": "2% discount for settlement within 10 days; tiered quarterly volume rebates at 1.5% / 3% / 4.5% spend thresholds."},
+    {"code": "CLS-LEG-09", "name": "Intellectual Property & Work Product Assignment", "clause_type": "Legal", "description": "Assigns bespoke deliverables and custom integrations to the buyer while preserving supplier background IP and open-source carve-outs."},
+    {"code": "CLS-OPS-10", "name": "Service Levels, Penalties & Root-Cause Remediation", "clause_type": "Operational", "description": "99.5% uptime commitment with service credits, mandatory RCA within 5 business days, and corrective action plans for repeat breaches."},
+]
+
+
+def ensure_contract_clause_data(db) -> None:
+    """Idempotent demo library for Contracts & Clauses (Neon / partial seeds)."""
+    for row in DEMO_CLAUSES:
+        if not db.query(Clause).filter(Clause.code == row["code"]).first():
+            db.add(Clause(**row, is_standard=True))
+
+    suppliers = {s.code: s for s in db.query(Supplier).all()}
+    s1 = suppliers.get("SUP_00101")
+    s2 = suppliers.get("SUP_00102")
+    s3 = suppliers.get("SUP_00103")
+    s5 = suppliers.get("SUP_00105")
+
+    demo_contracts = [
+        {"contract_number": "CTR_2026_004", "title": "Enterprise Master IT Equipment & Maintenance Agreement", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2026-01-01", "end_date": "2028-12-31", "total_value": 250000.0, "currency": "USD", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_005", "title": "Global Express Freight & Regional Fulfilment SLA", "supplier_id": s2.id if s2 else 2, "status": "Active", "contract_type": "Logistics Framework Agreement", "start_date": "2026-02-01", "end_date": "2027-01-31", "total_value": 180000.0, "currency": "USD", "owner_name": "Marcus Vance"},
+        {"contract_number": "CTR_2026_006", "title": "Plant Tooling & Mechanical Maintenance Master Agreement", "supplier_id": s5.id if s5 else 5, "status": "Draft", "contract_type": "Maintenance Service Agreement", "start_date": "2026-12-01", "end_date": "2027-11-30", "total_value": 95000.0, "currency": "USD", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_007", "title": "Cloud Infrastructure & SaaS Subscription Framework", "supplier_id": s3.id if s3 else 3, "status": "In Review", "contract_type": "Subscription & License Agreement", "start_date": "2026-03-01", "end_date": "2027-02-28", "total_value": 420000.0, "currency": "USD", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_008", "title": "Precision Components Strategic Preferred Supplier MSA", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2025-06-01", "end_date": "2028-05-31", "total_value": 310000.0, "currency": "USD", "owner_name": "Marcus Vance"},
+    ]
+    for row in demo_contracts:
+        if not db.query(Contract).filter(Contract.contract_number == row["contract_number"]).first():
+            db.add(Contract(**row))
+
+    db.commit()
+
 
 def ensure_supplemental_data(db) -> None:
     """Idempotent extras so detail pages (PR/PO) are never empty after seed."""
@@ -135,6 +174,7 @@ def ensure_supplemental_data(db) -> None:
             )
         )
 
+    ensure_contract_clause_data(db)
     db.commit()
 
 
@@ -650,55 +690,7 @@ def seed_database(force: bool = False):
     db.add_all([inv1, inv2, inv3])
     db.commit()
 
-    # Contracts & Clauses (Image 29)
-    clauses = [
-        Clause(code="CLS-OPS-01", name="Force Majeure & Unforeseen Circumstances", clause_type="Operational", description="Defines performance suspension relief under severe geopolitical, weather, or regulatory disruption exceeding 14 calendar days."),
-        Clause(code="CLS-CMP-02", name="Comprehensive Data Privacy & Security (GDPR/CCPA)", clause_type="Compliance", description="Binds supplier to rigorous encryption at rest and in transit, 72-hour breach notification, and strict data processing boundaries."),
-        Clause(code="CLS-LEG-03", name="Mutual Non-Disclosure & Proprietary Rights", clause_type="Legal", description="Ensures absolute commercial secrecy of pricing, architecture diagrams, and internal roadmaps."),
-        Clause(code="CLS-LEG-04", name="Limitation of Liability & Mutual Indemnification", clause_type="Legal", description="Caps aggregate direct damages at 2x annual contract fees while maintaining uncapped indemnity for IP infringement."),
-        Clause(code="CLS-FIN-05", name="Payment Terms, Milestones & Audit Rights", clause_type="Financial", description="Standard Net 30 day settlement upon formal milestone sign-off, with annual non-intrusive accounting audit provisions."),
-        Clause(code="CLS-OPS-06", name="Termination for Convenience & Transition Services", clause_type="Operational", description="Allows 30-day notice termination by the buyer with mandatory 60-day migration support at agreed rate cards.")
-    ]
-    db.add_all(clauses)
-    db.commit()
-
-    ctr1 = Contract(
-        contract_number="CTR_2026_004",
-        title="Enterprise Master IT Equipment & Maintenance Agreement",
-        supplier_id=s1.id,
-        status="Active",
-        contract_type="Master Services Agreement",
-        start_date="2026-01-01",
-        end_date="2028-12-31",
-        total_value=250000.0,
-        currency="USD",
-        owner_name="Rachel Adams"
-    )
-    ctr2 = Contract(
-        contract_number="CTR_2026_005",
-        title="Global Express Freight & Regional Fulfilment SLA",
-        supplier_id=s2.id,
-        status="Active",
-        contract_type="Logistics Framework Agreement",
-        start_date="2026-02-01",
-        end_date="2027-01-31",
-        total_value=180000.0,
-        currency="USD",
-        owner_name="Marcus Vance"
-    )
-    ctr3 = Contract(
-        contract_number="CTR_2026_006",
-        title="Plant Tooling & Mechanical Maintenance Master Agreement",
-        supplier_id=s5.id,
-        status="Draft",
-        contract_type="Maintenance Service Agreement",
-        start_date="2026-12-01",
-        end_date="2027-11-30",
-        total_value=95000.0,
-        currency="USD",
-        owner_name="Rachel Adams"
-    )
-    db.add_all([ctr1, ctr2, ctr3])
+    ensure_contract_clause_data(db)
 
     # Auctions (Image 14)
     auc1 = Auction(

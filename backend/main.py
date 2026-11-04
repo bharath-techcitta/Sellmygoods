@@ -219,6 +219,162 @@ def get_dashboard_tasks(db: Session = Depends(get_db)):
     tasks = db.query(ApprovalTask).order_by(ApprovalTask.id.desc()).all()
     return tasks
 
+def _task_route(module: str) -> str:
+    routes = {
+        "Supplier Registration": "suppliers",
+        "Purchase Request": "requisitions",
+        "Purchase Order": "purchase-orders",
+        "Invoice": "invoices",
+        "Bid Award": "bids",
+        "Budget": "budgets",
+        "Contracts": "contracts",
+        "Auction": "auctions",
+    }
+    return routes.get(module, "dashboard")
+
+
+@app.get("/api/v1/notifications")
+def get_notifications(db: Session = Depends(get_db)):
+    """Role-aware notification feed for the header bell."""
+    session = get_demo_session()
+    role = session.get("role", "procurement_buyer")
+    sup_id = session.get("supplier_id") or 1
+    items: List[dict] = []
+
+    if role == "supplier_user":
+        events = db.query(SourcingEvent).order_by(SourcingEvent.id.desc()).all()
+        for ev in events:
+            resp = db.query(BidResponse).filter(
+                BidResponse.event_id == ev.id,
+                BidResponse.supplier_id == sup_id,
+            ).first()
+            if not resp:
+                items.append({
+                    "id": f"bid-invite-{ev.id}",
+                    "title": f"RFQ invitation: {ev.code}",
+                    "message": ev.title,
+                    "time": "Awaiting your response",
+                    "priority": "High",
+                    "route": "buyer-bids",
+                    "module": "Bid",
+                })
+            elif ev.status in ("Live", "Technical Review", "Commercial Review"):
+                items.append({
+                    "id": f"bid-update-{ev.id}",
+                    "title": f"Quote under review — {ev.code}",
+                    "message": f"Your submission status: {resp.status}. Net quote ${resp.net_quote:,.2f}.",
+                    "time": "Updated recently",
+                    "priority": "Medium",
+                    "route": "buyer-bids",
+                    "module": "Bid",
+                })
+
+        live_auctions = db.query(Auction).filter(Auction.status == "Live").count()
+        if live_auctions:
+            items.append({
+                "id": "auction-live",
+                "title": "Live auction lot open",
+                "message": f"{live_auctions} auction(s) accepting competitive bids now.",
+                "time": "Live now",
+                "priority": "Urgent",
+                "route": "buyer-auctions",
+                "module": "Auction",
+            })
+
+        ctr_count = db.query(Contract).filter(Contract.supplier_id == sup_id, Contract.status == "Active").count()
+        if ctr_count:
+            items.append({
+                "id": "contracts-active",
+                "title": "Active master agreement on file",
+                "message": f"You have {ctr_count} active contract(s) with Procurio Corp US.",
+                "time": "Current",
+                "priority": "Low",
+                "route": "buyer-contracts",
+                "module": "Contracts",
+            })
+
+        items.append({
+            "id": "profile-banking",
+            "title": "Verify banking & tax documents",
+            "message": "Complete profile and banking details to receive PO payments.",
+            "time": "Recommended",
+            "priority": "Medium",
+            "route": "buyer-profile",
+            "module": "Supplier",
+        })
+    else:
+        tasks = (
+            db.query(ApprovalTask)
+            .filter(ApprovalTask.status == "Pending")
+            .order_by(ApprovalTask.id.desc())
+            .limit(8)
+            .all()
+        )
+        for t in tasks:
+            items.append({
+                "id": f"task-{t.id}",
+                "title": t.title,
+                "message": f"{t.module} • {t.record_code} • Due {t.due_date}",
+                "time": t.due_date or "Pending",
+                "priority": t.priority or "Medium",
+                "route": _task_route(t.module),
+                "module": t.module,
+            })
+
+        pending_sup = db.query(Supplier).filter(Supplier.status == "Pending Approval").count()
+        if pending_sup:
+            items.append({
+                "id": "sup-onboard",
+                "title": "Supplier onboarding queue",
+                "message": f"{pending_sup} supplier registration(s) awaiting compliance review.",
+                "time": "Today",
+                "priority": "High",
+                "route": "suppliers",
+                "module": "Supplier Registration",
+            })
+
+        pending_inv = db.query(Invoice).filter(Invoice.status == "Pending Approval").count()
+        if pending_inv:
+            items.append({
+                "id": "inv-ap",
+                "title": "Invoices pending AP approval",
+                "message": f"{pending_inv} invoice(s) require 3-way match sign-off.",
+                "time": "Today",
+                "priority": "Urgent",
+                "route": "invoices",
+                "module": "Invoice",
+            })
+
+        live_rfqs = db.query(SourcingEvent).filter(SourcingEvent.status.in_(["Live", "Technical Review"])).count()
+        if live_rfqs:
+            items.append({
+                "id": "rfq-eval",
+                "title": "Sourcing events in evaluation",
+                "message": f"{live_rfqs} RFQ/RFP event(s) need buyer or commercial action.",
+                "time": "This week",
+                "priority": "Medium",
+                "route": "bids",
+                "module": "Bid",
+            })
+
+        draft_contracts = db.query(Contract).filter(Contract.status.in_(["Draft", "In Review"])).count()
+        if draft_contracts:
+            items.append({
+                "id": "ctr-legal",
+                "title": "Contracts awaiting legal review",
+                "message": f"{draft_contracts} agreement(s) in draft or in review.",
+                "time": "This week",
+                "priority": "Medium",
+                "route": "contracts",
+                "module": "Contracts",
+            })
+
+    priority_order = {"Urgent": 0, "High": 1, "Medium": 2, "Low": 3}
+    items.sort(key=lambda x: priority_order.get(x.get("priority", "Medium"), 2))
+
+    return {"unread_count": len(items), "items": items[:12]}
+
+
 @app.get("/api/v1/dashboard/recent-activity")
 def get_recent_activity():
     return [

@@ -28,6 +28,8 @@ export default function StatusBadge({ status }) {
       text = '#b65c16';
       border = '#fde68a';
       break;
+    case 'In Review':
+    case 'Negotiation':
     case 'Submitted':
     case 'Issued':
     case 'Published':

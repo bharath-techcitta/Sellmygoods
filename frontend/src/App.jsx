@@ -93,8 +93,8 @@ export default function App() {
           activePortal={activePortal}
           currentRole={currentRole}
           onSwitchRole={handleSwitchRole}
+          onNavigate={navigateTo}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          isSidebarCollapsed={isSidebarCollapsed}
         />
 
         {/* Content Page (18-24px padding) */}
