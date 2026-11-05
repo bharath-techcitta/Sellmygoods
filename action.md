@@ -108,7 +108,9 @@ Switch role → **Elena Rostova (Precision Components - Supplier)**.
    - `DATABASE_URL` = Neon connection string
    - `CORS_ORIGINS` = your Vercel URL or `*`
    - `PYTHON_VERSION` = `3.11.9`
-4. Redeploy after each backend change; startup runs schema migrate + seed.
+4. **Required:** set `DATABASE_URL` to the same Neon string as local `.env` (without committing `.env`).
+5. Redeploy — `render_startup.py` migrates + seeds **before** Uvicorn starts.
+6. Verify: `https://<your-render-host>/api/v1/health/db` → `status: ok` and non-zero counts.
 
 Copy Render URL: `https://<service>.onrender.com`
 

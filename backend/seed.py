@@ -504,10 +504,22 @@ def ensure_live_auctions_ready(db) -> None:
     db.commit()
 
 
+def ensure_budget_rows(db) -> None:
+    if db.query(Budget).first():
+        return
+    db.add_all([
+        Budget(fiscal_period="FY 2026-2027", department="Information Technology", cost_centre="CC-1020-IT", approved_budget=350000.0, adjustments=0.0, pr_reserved=32000.0, po_committed=85000.0, invoiced_actuals=64000.0, available_balance=169000.0),
+        Budget(fiscal_period="FY 2026-2027", department="Plant Operations", cost_centre="CC-2040-OPS", approved_budget=500000.0, adjustments=15000.0, pr_reserved=15500.0, po_committed=140000.0, invoiced_actuals=120000.0, available_balance=239500.0),
+        Budget(fiscal_period="FY 2026-2027", department="Facilities & Admin", cost_centre="CC-3010-FAC", approved_budget=180000.0, adjustments=0.0, pr_reserved=8000.0, po_committed=42000.0, invoiced_actuals=35000.0, available_balance=95000.0),
+    ])
+    db.commit()
+
+
 def ensure_supplemental_data(db) -> None:
     """Idempotent extras so detail pages (PR/PO) are never empty after seed."""
     ensure_purchase_orders_and_invoices(db)
     ensure_auction_dummy_data(db)
+    ensure_budget_rows(db)
     pr2 = db.query(Requisition).filter(Requisition.pr_number == "PR_00085").first()
     if pr2 and not db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr2.id).first():
         item3 = db.query(Item).filter(Item.sku == "IND-VLV-22").first()

@@ -124,15 +124,33 @@ async def attach_demo_session(request: Request, call_next):
         _request_session.reset(token)
 
 
+def _startup_seed_with_retries(attempts: int = 3) -> None:
+    import time
+    from .seed import seed_database
+
+    for attempt in range(1, attempts + 1):
+        try:
+            seed_database()
+            return
+        except Exception as e:
+            print(f"Startup seed attempt {attempt}/{attempts} failed: {e}", flush=True)
+            if attempt < attempts:
+                time.sleep(5 * attempt)
+    print("Startup seed failed after retries — check DATABASE_URL and Render logs.", flush=True)
+
+
 @app.on_event("startup")
 def on_startup():
+    from .database import DATABASE_URL
+    if not os.getenv("DATABASE_URL"):
+        print("WARNING: DATABASE_URL unset — using local fallback DB (deploy will have no Neon data).", flush=True)
+    elif DATABASE_URL.startswith("sqlite"):
+        print("WARNING: SQLite in use — set DATABASE_URL to Neon on Render.", flush=True)
+    else:
+        print("Startup: PostgreSQL configured.", flush=True)
     from .schema_migrate import ensure_postgres_schema
     ensure_postgres_schema()
-    try:
-        from .seed import seed_database
-        seed_database()
-    except Exception as e:
-        print(f"Startup notice: {e}")
+    _startup_seed_with_retries()
 
 # ----------------- AUTH & SESSION -----------------
 
@@ -169,6 +187,38 @@ def switch_role(req: RoleSwitchRequest):
 def health_check():
     """Lightweight probe for Render / uptime checks (no DB round-trip)."""
     return {"status": "ok", "service": "procurio-api"}
+
+
+@app.get("/api/v1/health/db")
+def health_db(db: Session = Depends(get_db)):
+    """Deploy diagnostic: confirms Neon/Postgres connectivity and demo row counts."""
+    from .database import DATABASE_URL
+    from .models import Supplier, Requisition, Auction, PurchaseOrder, Budget
+
+    backend = "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
+    try:
+        counts = {
+            "suppliers": db.query(Supplier).count(),
+            "requisitions": db.query(Requisition).count(),
+            "auctions": db.query(Auction).count(),
+            "purchase_orders": db.query(PurchaseOrder).count(),
+            "budgets": db.query(Budget).count(),
+        }
+        seeded = counts["suppliers"] > 0
+        return {
+            "status": "ok" if seeded else "empty",
+            "database_backend": backend,
+            "database_url_configured": bool(os.getenv("DATABASE_URL")),
+            "counts": counts,
+            "hint": None if seeded else "Run push_to_neon.py locally or set DATABASE_URL on Render and redeploy.",
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "database_backend": backend,
+            "database_url_configured": bool(os.getenv("DATABASE_URL")),
+            "error": str(e),
+        }
 
 
 # ----------------- DASHBOARD & METRICS -----------------
