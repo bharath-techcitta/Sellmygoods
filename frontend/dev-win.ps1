@@ -13,12 +13,14 @@ if ($repoRoot -match '[%&^]') {
     Write-Host ""
 }
 
-$mapped = subst 2>$null | Select-String -Pattern "^\s*$drive\s" -Quiet
-if ($mapped) {
-    subst $drive /D | Out-Null
+Set-Location $repoRoot
+cmd /c "subst $drive /d" 2>$null | Out-Null
+Start-Sleep -Milliseconds 150
+$substResult = cmd /c "subst $drive `"$repoRoot`"" 2>&1
+if ($LASTEXITCODE -ne 0 -and $substResult -notmatch 'already SUBSTed') {
+    Write-Host $substResult -ForegroundColor Red
+    exit 1
 }
-
-subst $drive $repoRoot
 Write-Host "Mapped $repoRoot -> ${drive}\"
 Write-Host "Starting Vite at http://127.0.0.1:3000 (API proxy -> localhost:8000)"
 Set-Location "${drive}\frontend"

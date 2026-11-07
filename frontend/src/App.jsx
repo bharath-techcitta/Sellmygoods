@@ -145,6 +145,10 @@ export default function App() {
                   prId={selectedPrId}
                   onBack={() => navigateTo('requisitions')}
                   navigateTo={navigateTo}
+                  onAuctionCreated={(id) => {
+                    setSelectedAuctionId(id);
+                    navigateTo('auction-monitor');
+                  }}
                   onPoCreated={(id) => {
                     setSelectedPoId(id);
                     navigateTo('purchase-order-detail');

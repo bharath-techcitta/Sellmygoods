@@ -52,10 +52,32 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
   const [counts, setCounts] = useState({ Total: 3, Approved: 1, 'Pending Approval': 1, Draft: 1 });
   const [activeFilter, setActiveFilter] = useState('Total');
   const [searchTerm, setSearchTerm] = useState('');
+  const [nsStatus, setNsStatus] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState({ ok: true, text: '' });
 
   useEffect(() => {
     loadPRs();
   }, [activeFilter, searchTerm]);
+
+  useEffect(() => {
+    api.getNetsuiteStatus().then(setNsStatus).catch(() => {});
+  }, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncMsg({ ok: true, text: '' });
+    try {
+      const r = await api.syncPurchaseRequests(false);
+      setSyncMsg({ ok: true, text: `NetSuite sync complete: ${r.created} new, ${r.updated} updated, ${r.unchanged} unchanged${r.failed ? `, ${r.failed} failed` : ''} (${r.fetched} fetched).` });
+      await loadPRs();
+      api.getNetsuiteStatus().then(setNsStatus).catch(() => {});
+    } catch (e) {
+      setSyncMsg({ ok: false, text: e.message || 'NetSuite sync failed' });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const loadPRs = async () => {
     try {
@@ -100,6 +122,14 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
             Track operational demand, budget reservations, policy compliance, and downstream conversions
           </p>
         </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          style={{ padding: '9px 16px', backgroundColor: '#fff', color: '#432177', border: '1px solid #432177', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: syncing ? 'wait' : 'pointer' }}
+        >
+          {syncing ? 'Syncing…' : '⟳ Sync from NetSuite'}
+        </button>
         <button
           onClick={() => {
             onSelectPR(null);
@@ -118,7 +148,24 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
         >
           + Create PR
         </button>
+        </div>
       </div>
+
+      {nsStatus && !nsStatus.configured && (
+        <div style={{ padding: '10px 14px', background: '#fff0d8', color: '#b65c16', borderRadius: 6, marginBottom: 14, fontSize: 13 }}>
+          NetSuite is not configured, so no PRs can be synced yet. Missing environment variables: <strong>{nsStatus.missing_env.join(', ')}</strong>.
+        </div>
+      )}
+      {nsStatus && nsStatus.configured && (
+        <div style={{ marginBottom: 10, fontSize: 12, color: '#73767b' }}>
+          NetSuite connected · {nsStatus.netsuite_pr_count} PRs synced · last sync {nsStatus.last_synced_at ? new Date(nsStatus.last_synced_at).toLocaleString() : 'never'} · eligible for auction: {nsStatus.eligible_statuses.join(', ')}
+        </div>
+      )}
+      {syncMsg.text && (
+        <div role="status" style={{ padding: '10px 14px', background: syncMsg.ok ? '#d1fae8' : '#fee2e2', color: syncMsg.ok ? '#0f9d78' : '#c32e3b', borderRadius: 6, marginBottom: 14, fontSize: 13, fontWeight: 600 }}>
+          {syncMsg.text}
+        </div>
+      )}
 
       {/* Metrics Filter Bar (Image 11) */}
       <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '18px' }}>
@@ -199,6 +246,7 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
                 <th style={{ padding: '12px 16px', textAlign: 'right' }}>Total Amount</th>
                 <th style={{ padding: '12px 16px' }}>Target Delivery</th>
                 <th style={{ padding: '12px 16px' }}>Current Approver</th>
+                <th style={{ padding: '12px 16px' }}>Source / Sync</th>
               </tr>
             </thead>
             <tbody>
@@ -231,6 +279,10 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
                   <td style={{ padding: '12px 16px', color: '#73767b' }}>{pr.delivery_date}</td>
                   <td style={{ padding: '12px 16px', color: '#432177', fontWeight: '500' }}>
                     {pr.current_approver}
+                  </td>
+                  <td style={{ padding: '12px 16px', color: '#73767b', fontSize: 12, whiteSpace: 'nowrap' }}>
+                    {pr.source === 'netsuite' ? `NetSuite #${pr.netsuite_internal_id} · ${pr.sync_status || 'Synced'}` : 'Local'}
+                    {pr.last_synced_at && <div>{new Date(pr.last_synced_at.endsWith('Z') ? pr.last_synced_at : pr.last_synced_at + 'Z').toLocaleString()}</div>}
                   </td>
                 </tr>
               ))}

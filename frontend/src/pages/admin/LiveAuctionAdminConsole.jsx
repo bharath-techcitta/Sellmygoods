@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
+import AuctionBarCharts from '../../components/AuctionBarCharts';
 
 function formatInr(n) {
   if (n == null || Number.isNaN(n)) return '—';
@@ -73,18 +74,17 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
       setData(res);
     } catch (e) {
       console.error(e);
-      setData(null);
       setLoadError(e.message || 'Could not load monitor console.');
     }
   }, [auctionId]);
 
   useEffect(() => {
     load();
-    const poll = setInterval(load, 8000);
+    const poll = setInterval(load, 4000);
     return () => clearInterval(poll);
   }, [load]);
 
-  if (loadError) {
+  if (loadError && !data) {
     return (
       <div style={{ padding: 24 }}>
         {onBack && (
@@ -242,6 +242,10 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <AuctionBarCharts auctionId={auctionId} view="buyer" refreshMs={5000} />
       </div>
 
       {/* Chart + activity */}

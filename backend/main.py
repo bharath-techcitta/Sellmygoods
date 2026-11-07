@@ -197,10 +197,18 @@ def health_db(db: Session = Depends(get_db)):
 
     backend = "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
     try:
+        live_auctions = db.query(Auction).filter(Auction.status == "Live").count()
+        sample = (
+            db.query(Auction.auction_number, Auction.status, Auction.title)
+            .order_by(Auction.id.desc())
+            .limit(5)
+            .all()
+        )
         counts = {
             "suppliers": db.query(Supplier).count(),
             "requisitions": db.query(Requisition).count(),
             "auctions": db.query(Auction).count(),
+            "live_auctions": live_auctions,
             "purchase_orders": db.query(PurchaseOrder).count(),
             "budgets": db.query(Budget).count(),
         }
@@ -210,6 +218,10 @@ def health_db(db: Session = Depends(get_db)):
             "database_backend": backend,
             "database_url_configured": bool(os.getenv("DATABASE_URL")),
             "counts": counts,
+            "sample_auctions": [
+                {"auction_number": n, "status": s, "title": t} for n, s, t in sample
+            ],
+            "auctions_api": "/api/v1/auctions",
             "hint": None if seeded else "Run push_to_neon.py locally or set DATABASE_URL on Render and redeploy.",
         }
     except Exception as e:
@@ -671,6 +683,119 @@ def get_requisition_detail(id: int, db: Session = Depends(get_db)):
             {"step": "Finance Allocation Check", "actor": "David Chen", "decision": "Approved", "timestamp": "2026-11-02 14:15", "comments": "Budget headroom validated against FY26 Q4 IT pool."}
         ]
     }
+
+# ----------------- NETSUITE PURCHASE REQUESTS (sync + auction eligibility) -----------------
+
+from . import netsuite as ns
+
+
+@app.get("/api/v1/netsuite/status")
+def netsuite_status(db: Session = Depends(get_db)):
+    """Connection/config state. Never returns credentials."""
+    last = (db.query(Requisition.last_synced_at)
+            .filter(Requisition.source == "netsuite", Requisition.last_synced_at.isnot(None))
+            .order_by(Requisition.last_synced_at.desc()).first())
+    return {
+        "configured": ns.is_configured(),
+        "missing_env": ns.missing_config(),
+        "eligible_statuses": ns.eligible_statuses(),
+        "allow_multiple_auctions_per_pr": ns.allow_multiple_auctions_per_pr(),
+        "netsuite_pr_count": db.query(Requisition).filter(Requisition.source == "netsuite").count(),
+        "last_synced_at": (last[0].isoformat() + "Z") if last and last[0] else None,
+    }
+
+
+class SyncPRRequest(BaseModel):
+    full: bool = False
+
+
+@app.post("/api/v1/purchase-requests/sync")
+def sync_purchase_requests_endpoint(req: Optional[SyncPRRequest] = None, db: Session = Depends(get_db)):
+    try:
+        return ns.sync_purchase_requests(db, full=bool(req and req.full))
+    except ns.NetSuiteNotConfigured as e:
+        raise HTTPException(status_code=503, detail={"code": "netsuite_not_configured", "message": str(e), "missing_env": e.missing})
+    except ns.NetSuiteError as e:
+        raise HTTPException(status_code=502, detail={"code": "netsuite_error", "message": str(e)})
+
+
+def _pr_auction_eligibility(db: Session, pr: Requisition) -> dict:
+    reasons = []
+    allowed = ns.eligible_statuses()
+    if pr.status not in allowed:
+        reasons.append(f"PR status is '{pr.status}'; eligible statuses: {', '.join(allowed)}.")
+    lines = db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr.id).count()
+    if lines == 0:
+        reasons.append("PR has no item lines.")
+    if not (pr.total_amount or 0) > 0:
+        reasons.append("PR has no estimated amount.")
+    if not ns.allow_multiple_auctions_per_pr():
+        existing = (db.query(Auction)
+                    .filter(Auction.requisition_id == pr.id, Auction.status.notin_(["Closed"]))
+                    .first())
+        if existing:
+            reasons.append(f"Auction {existing.auction_number} already exists for this PR.")
+    return {"eligible": not reasons, "reasons": reasons, "eligible_statuses": allowed}
+
+
+@app.get("/api/v1/purchase-requests/{id}/auction-eligibility")
+def pr_auction_eligibility(id: int, db: Session = Depends(get_db)):
+    pr = db.query(Requisition).filter(Requisition.id == id).first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Requisition not found")
+    return _pr_auction_eligibility(db, pr)
+
+
+class CreateAuctionFromPRRequest(BaseModel):
+    title: Optional[str] = None
+    duration_hours: float = 2.0
+    status: str = "Scheduled"
+    min_decrement: Optional[float] = None
+    min_bid_improvement: Optional[float] = None
+    reserve_price: Optional[float] = None
+
+
+@app.post("/api/v1/purchase-requests/{id}/create-auction")
+def create_auction_from_pr(id: int, req: CreateAuctionFromPRRequest, db: Session = Depends(get_db)):
+    pr = db.query(Requisition).filter(Requisition.id == id).first()
+    if not pr:
+        raise HTTPException(status_code=404, detail="Requisition not found")
+    elig = _pr_auction_eligibility(db, pr)
+    if not elig["eligible"]:
+        raise HTTPException(status_code=409, detail={"code": "pr_not_eligible", "reasons": elig["reasons"]})
+    lines = (db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr.id)
+             .order_by(RequisitionLine.line_number, RequisitionLine.id).all())
+    reserve = req.reserve_price if req.reserve_price is not None else float(pr.total_amount)
+    dec = req.min_decrement if req.min_decrement is not None else max(1.0, round(reserve * 0.005, 2))
+    payload = CreateAuctionRequest(
+        title=(req.title or f"{pr.pr_number} - {pr.description or 'Reverse auction'}")[:200],
+        auction_type="Reverse Sourcing",
+        status=req.status if req.status in ("Scheduled", "Live") else "Scheduled",
+        pr_number=pr.pr_number,
+        reserve_price=reserve,
+        min_decrement=dec,
+        min_bid_improvement=req.min_bid_improvement if req.min_bid_improvement is not None else dec,
+        freight_fixed=0.0,
+        tax_rate_pct=0.0,
+        currency="INR",
+        duration_hours=req.duration_hours,
+        lines=[
+            CreateAuctionLineRequest(
+                line_code=f"L{(l.line_number or i):02d}",
+                description=(l.item_name or l.description or "Item")[:200],
+                quantity=float(l.quantity or 1),
+                uom=l.uom or "Unit",
+                last_rate=float(l.unit_price or 0),
+            )
+            for i, l in enumerate(lines, start=1)
+        ],
+    )
+    result = create_auction(payload, db)
+    auc = db.query(Auction).filter(Auction.id == result["id"]).first()
+    auc.requisition_id = pr.id
+    db.commit()
+    return {**result, "requisition_id": pr.id}
+
 
 class CreatePRRequest(BaseModel):
     description: str
@@ -1186,7 +1311,8 @@ def approve_invoice(id: int, db: Session = Depends(get_db)):
 # ----------------- AUCTIONS (E12, Image 14) -----------------
 
 def _auction_currency(a: Auction) -> str:
-    return getattr(a, "currency", None) or "USD"
+    """All auctions are presented in rupees (override with AUCTION_CURRENCY)."""
+    return os.getenv("AUCTION_CURRENCY", "INR").strip().upper() or "INR"
 
 
 def _serialize_auction(a: Auction) -> dict:
@@ -1198,8 +1324,8 @@ def _serialize_auction(a: Auction) -> dict:
         "status": a.status,
         "pr_number": a.pr_number,
         "current_approver": a.current_approver,
-        "start_time": a.start_time.isoformat() if a.start_time else None,
-        "end_time": a.end_time.isoformat() if a.end_time else None,
+        "start_time": a.start_time.isoformat() + "Z" if a.start_time else None,
+        "end_time": a.end_time.isoformat() + "Z" if a.end_time else None,
         "reserve_price": float(a.reserve_price or 0),
         "min_decrement": float(a.min_decrement or 0),
         "min_bid_improvement": float(getattr(a, "min_bid_improvement", None) or a.min_decrement or 5000),
@@ -1207,7 +1333,7 @@ def _serialize_auction(a: Auction) -> dict:
         "best_bidder_id": a.best_bidder_id,
         "total_bids_placed": int(a.total_bids_placed or 0),
         "freight_fixed": float(getattr(a, "freight_fixed", None) or 0),
-        "tax_rate_pct": float(getattr(a, "tax_rate_pct", None) or 18.0),
+        "tax_rate_pct": float(a.tax_rate_pct) if getattr(a, "tax_rate_pct", None) is not None else 18.0,
         "visibility": getattr(a, "visibility", None) or "own_rank_only",
         "terms_version": getattr(a, "terms_version", None) or "3",
         "extensions_used": int(getattr(a, "extensions_used", None) or 0),
@@ -1222,7 +1348,8 @@ def _compute_auction_evaluated_total(auc: Auction, line_items: List[AuctionLineI
         rate = float(rates_by_id.get(ln.id, ln.last_rate))
         material += float(ln.quantity) * rate
     freight = float(getattr(auc, "freight_fixed", None) or 0)
-    tax = (material + freight) * (float(getattr(auc, "tax_rate_pct", None) or 18.0) / 100.0)
+    tax_pct = float(auc.tax_rate_pct) if getattr(auc, "tax_rate_pct", None) is not None else 18.0
+    tax = (material + freight) * (tax_pct / 100.0)
     return material, freight, tax, material + freight + tax
 
 
@@ -1231,6 +1358,7 @@ def get_auction_live_console(id: int, db: Session = Depends(get_db)):
     auc = db.query(Auction).filter(Auction.id == id).first()
     if not auc:
         raise HTTPException(status_code=404, detail="Auction not found")
+    _close_if_expired(db, auc)
     supplier_id = get_demo_session().get("supplier_id") or 1
     lines = db.query(AuctionLineItem).filter(AuctionLineItem.auction_id == id).order_by(AuctionLineItem.id).all()
     if not lines and auc.auction_number == "AUC_2026_013":
@@ -1238,6 +1366,18 @@ def get_auction_live_console(id: int, db: Session = Depends(get_db)):
             AuctionLineItem(id=-1, auction_id=id, line_code="SCR-01", description="HMS 1", quantity=60, uom="MT", last_rate=48500),
             AuctionLineItem(id=-2, auction_id=id, line_code="SCR-02", description="HMS 2", quantity=40, uom="MT", last_rate=46200),
         ]
+    my_receipts = (
+        db.query(AuctionBidReceipt)
+        .filter(AuctionBidReceipt.auction_id == id, AuctionBidReceipt.supplier_id == supplier_id)
+        .order_by(AuctionBidReceipt.created_at.desc(), AuctionBidReceipt.id.desc())
+        .all()
+    )
+    last_accepted = my_receipts[0] if my_receipts else None
+    my_last_rates = {
+        x.get("line_code"): float(x.get("new_rate"))
+        for x in ((last_accepted.line_rates or []) if last_accepted else [])
+        if isinstance(x, dict) and x.get("new_rate") is not None
+    }
     line_payload = [
         {
             "id": ln.id,
@@ -1245,40 +1385,42 @@ def get_auction_live_console(id: int, db: Session = Depends(get_db)):
             "description": ln.description,
             "quantity": float(ln.quantity),
             "uom": ln.uom,
-            "last_rate": float(ln.last_rate),
+            "last_rate": my_last_rates.get(ln.line_code, float(ln.last_rate)),
         }
         for ln in lines
     ]
-    my_receipts = (
-        db.query(AuctionBidReceipt)
-        .filter(AuctionBidReceipt.auction_id == id, AuctionBidReceipt.supplier_id == supplier_id)
-        .order_by(AuctionBidReceipt.created_at.desc())
-        .all()
-    )
-    last_accepted = my_receipts[0] if my_receipts else None
     history = [
         {
             "receipt_id": r.receipt_id,
-            "accepted_at": r.created_at.isoformat() if r.created_at else None,
+            "accepted_at": r.created_at.isoformat() + "Z" if r.created_at else None,
             "evaluated_total": float(r.evaluated_total),
             "rank_at_acceptance": r.rank_at_acceptance,
             "outcome": r.outcome,
         }
         for r in my_receipts
     ]
-    if last_accepted:
-        my_rank = _rank_supplier_on_auction(db, auc, supplier_id, float(last_accepted.evaluated_total))
-    elif auc.best_bidder_id == supplier_id:
-        my_rank = 1
-    else:
-        my_rank = 2 if auc.best_bidder_id else 1
+    my_rank = _rank_supplier_on_auction(db, auc, supplier_id)
+    best_map = _supplier_best_totals(db, auc)
+    fwd = _is_forward(auc)
+    min_imp = float(getattr(auc, "min_bid_improvement", None) or auc.min_decrement or 0)
+    my_best = best_map.get(supplier_id)
+    ahead = sorted([v for v in best_map.values() if my_best is None or (v > my_best if fwd else v < my_best)], reverse=fwd)
+    leader_val = (max(best_map.values()) if fwd else min(best_map.values())) if best_map else None
+    # Bid required to beat the supplier directly above (next rank) / the leader (rank 1)
+    next_rank_target = None
+    if ahead:
+        rival = ahead[-1]  # sorted best-first, so the last entry is the rival directly above me
+        next_rank_target = rival + min_imp if fwd else rival - min_imp
+    lead_target = None
+    if leader_val is not None and my_rank != 1:
+        lead_target = leader_val + min_imp if fwd else leader_val - min_imp
     visibility_label = "Own rank only" if (getattr(auc, "visibility", None) or "own_rank_only") == "own_rank_only" else "Full leaderboard"
     return {
         "auction": _serialize_auction(auc),
         "bidding_allowed": auc.status == "Live",
         "lines": line_payload,
         "commercial_conditions": {
-            "freight_fixed": float(getattr(auc, "freight_fixed", None) or 85000),
+            "freight_fixed": float(getattr(auc, "freight_fixed", None) or 0),
             "delivery_terms": "Plant gate delivery within 7 calendar days of award",
             "tax_note": f"GST {float(getattr(auc, 'tax_rate_pct', None) or 18):.0f}% on material + freight (illustrative)",
             "payment_terms": "Net 30 days from GRN (fixed)",
@@ -1288,8 +1430,13 @@ def get_auction_live_console(id: int, db: Session = Depends(get_db)):
         "session": {
             "your_last_accepted_total": float(last_accepted.evaluated_total) if last_accepted else None,
             "your_last_receipt_id": last_accepted.receipt_id if last_accepted else None,
-            "your_last_accepted_at": last_accepted.created_at.isoformat() if last_accepted and last_accepted.created_at else None,
+            "your_last_accepted_at": last_accepted.created_at.isoformat() + "Z" if last_accepted and last_accepted.created_at else None,
             "your_current_rank": my_rank,
+            "total_bidders": len(best_map),
+            "your_best_total": my_best,
+            "leader_total": leader_val,
+            "bid_to_take_lead": lead_target,
+            "bid_to_gain_one_rank": next_rank_target,
             "visibility": visibility_label,
             "online": True,
         },
@@ -1387,6 +1534,7 @@ def get_auction_monitor(id: int, db: Session = Depends(get_db)):
     auc = db.query(Auction).filter(Auction.id == id).first()
     if not auc:
         raise HTTPException(status_code=404, detail="Auction not found")
+    _close_if_expired(db, auc)
 
     cur = _auction_currency(auc)
     best_total = float(auc.current_best_bid or 0)
@@ -1501,33 +1649,118 @@ def _next_auction_number(db: Session) -> str:
     return f"{prefix}{seq + 1:03d}"
 
 
-def _rank_supplier_on_auction(db: Session, auc: Auction, supplier_id: int, new_total: float) -> int:
-    """Rank 1 = best position after this bid (reverse: lower total wins)."""
-    rows = (
+def _is_forward(auc: Auction) -> bool:
+    return auc.auction_type == "Forward Disposal"
+
+
+def _supplier_best_totals(db: Session, auc: Auction) -> dict:
+    """Best bid per supplier (reverse: lowest, forward: highest) from stored receipts."""
+    best: dict = {}
+    rows = db.query(AuctionBidReceipt).filter(AuctionBidReceipt.auction_id == auc.id).all()
+    for r in rows:
+        v = float(r.evaluated_total)
+        prev = best.get(r.supplier_id)
+        if prev is None or (v > prev if _is_forward(auc) else v < prev):
+            best[r.supplier_id] = v
+    return best
+
+
+def _rank_supplier_on_auction(db: Session, auc: Auction, supplier_id: int, new_total: Optional[float] = None) -> Optional[int]:
+    """1 = leading. Uses each supplier's best bid; optional new_total simulates a pending bid."""
+    best = _supplier_best_totals(db, auc)
+    if new_total is not None:
+        prev = best.get(supplier_id)
+        v = float(new_total)
+        if prev is None or (v > prev if _is_forward(auc) else v < prev):
+            best[supplier_id] = v
+    if supplier_id not in best:
+        return None
+    mine = best[supplier_id]
+    better = sum(1 for v in best.values() if (v > mine if _is_forward(auc) else v < mine))
+    return better + 1
+
+
+def _close_if_expired(db: Session, auc: Auction) -> Auction:
+    """Auto-close a Live auction whose timer has run out."""
+    if auc.status == "Live" and auc.end_time and auc.end_time <= datetime.datetime.utcnow():
+        auc.status = "Award Under Process" if (auc.total_bids_placed or 0) > 0 else "Closed"
+        db.commit()
+        db.refresh(auc)
+    return auc
+
+
+def _anon_label(idx: int) -> str:
+    letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    return f"Bidder {letters[idx % 26]}" + (str(idx // 26 + 1) if idx >= 26 else "")
+
+
+@app.get("/api/v1/auctions/{id}/analytics")
+def get_auction_analytics(id: int, view: str = "buyer", db: Session = Depends(get_db)):
+    """Bar-chart analytics: rank ladder, bids per supplier, bid-by-bid timeline.
+    view=supplier anonymises competitors (sealed bid)."""
+    auc = db.query(Auction).filter(Auction.id == id).first()
+    if not auc:
+        raise HTTPException(status_code=404, detail="Auction not found")
+    _close_if_expired(db, auc)
+    me = get_demo_session().get("supplier_id") or 1
+    receipts = (
         db.query(AuctionBidReceipt)
-        .filter(AuctionBidReceipt.auction_id == auc.id)
-        .order_by(AuctionBidReceipt.created_at.desc())
+        .filter(AuctionBidReceipt.auction_id == id)
+        .order_by(AuctionBidReceipt.created_at.asc(), AuctionBidReceipt.id.asc())
         .all()
     )
-    best_by_supplier: dict = {}
-    for r in rows:
-        if r.supplier_id not in best_by_supplier:
-            best_by_supplier[r.supplier_id] = float(r.evaluated_total)
-    best_by_supplier[supplier_id] = float(new_total)
-    totals = list(best_by_supplier.values())
-    if auc.auction_type == "Forward Disposal":
-        totals.sort(reverse=True)
-    else:
-        totals.sort()
-    try:
-        return totals.index(float(new_total)) + 1
-    except ValueError:
-        return 1
+    best = _supplier_best_totals(db, auc)
+    ordered = sorted(best.items(), key=lambda kv: kv[1], reverse=_is_forward(auc))
+    counts: dict = {}
+    for r in receipts:
+        counts[r.supplier_id] = counts.get(r.supplier_id, 0) + 1
+    anonymise = view == "supplier"
+    bars = []
+    for idx, (sid, total) in enumerate(ordered):
+        sup = db.query(Supplier).filter(Supplier.id == sid).first()
+        real = (sup.trading_name or sup.legal_name) if sup else f"Supplier #{sid}"
+        is_me = sid == me
+        label = "You" if (anonymise and is_me) else (_anon_label(idx) if anonymise else real)
+        bars.append({
+            "rank": idx + 1,
+            "label": label,
+            "supplier_id": sid if (not anonymise or is_me) else None,
+            "value": total,
+            "bids": counts.get(sid, 0),
+            "is_me": is_me,
+        })
+    timeline = []
+    for i, r in enumerate(receipts[-20:], start=max(1, len(receipts) - 19)):
+        timeline.append({
+            "seq": i,
+            "label": f"#{i}",
+            "value": float(r.evaluated_total),
+            "time": _ist_time_label(r.created_at),
+            "is_me": r.supplier_id == me,
+        })
+    leader = ordered[0][1] if ordered else None
+    my_best = best.get(me)
+    return {
+        "auction_id": id,
+        "currency": _auction_currency(auc),
+        "auction_type": auc.auction_type,
+        "status": auc.status,
+        "reserve_price": float(auc.reserve_price or 0),
+        "leader_value": leader,
+        "my_best": my_best,
+        "my_rank": _rank_supplier_on_auction(db, auc, me),
+        "total_bidders": len(best),
+        "total_bids": len(receipts),
+        "rank_bars": bars,
+        "timeline_bars": timeline,
+    }
 
 
 @app.get("/api/v1/auctions")
 def get_auctions(db: Session = Depends(get_db)):
     aucs = db.query(Auction).all()
+    for a in aucs:
+        _close_if_expired(db, a)
     status_order = {"Live": 0, "Scheduled": 1, "Award Under Process": 2, "Closed": 3}
     aucs.sort(key=lambda a: (status_order.get(a.status, 9), -(a.id or 0)))
     return [_serialize_auction(a) for a in aucs]
@@ -1552,7 +1785,7 @@ class CreateAuctionRequest(BaseModel):
     min_bid_improvement: Optional[float] = None
     freight_fixed: Optional[float] = 0.0
     tax_rate_pct: Optional[float] = 18.0
-    currency: Optional[str] = "USD"
+    currency: Optional[str] = "INR"
     duration_hours: float = 2.0
     lines: Optional[List[CreateAuctionLineRequest]] = None
 
@@ -1566,11 +1799,11 @@ def create_auction(req: CreateAuctionRequest, db: Session = Depends(get_db)):
     start = now if status == "Live" else now + datetime.timedelta(minutes=5)
     end = start + datetime.timedelta(hours=max(0.5, float(req.duration_hours or 2)))
 
-    currency = req.currency or ("INR" if req.auction_type == "Reverse Sourcing" and req.freight_fixed else "USD")
+    currency = _auction_currency(None)
     min_dec = float(req.min_decrement or (500 if req.auction_type == "Forward Disposal" else 2500))
     min_imp = float(req.min_bid_improvement or min_dec)
     freight = float(req.freight_fixed or 0)
-    tax_pct = float(req.tax_rate_pct or 18)
+    tax_pct = float(req.tax_rate_pct) if req.tax_rate_pct is not None else 18.0
 
     line_items: List[AuctionLineItem] = []
     if req.lines:
@@ -1675,10 +1908,9 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
     auc = db.query(Auction).filter(Auction.id == id).first()
     if not auc:
         raise HTTPException(status_code=404, detail="Auction not found")
+    _close_if_expired(db, auc)
     if auc.status != "Live":
         raise HTTPException(status_code=400, detail="This auction is not open for bidding (Live lots only).")
-    if auc.end_time and auc.end_time <= datetime.datetime.utcnow():
-        raise HTTPException(status_code=400, detail="This auction has ended.")
 
     supplier_id = get_demo_session().get("supplier_id") or 1
     line_items = db.query(AuctionLineItem).filter(AuctionLineItem.auction_id == id).order_by(AuctionLineItem.id).all()
@@ -1711,34 +1943,31 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
         .order_by(AuctionBidReceipt.created_at.desc())
         .first()
     )
-    if last_receipt and auc.auction_type == "Reverse Sourcing":
-        if evaluated_total > last_receipt.evaluated_total - min_improve:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Minimum own-bid improvement is {cur} {min_improve:,.0f}. Lower evaluated total required.",
-            )
+    evaluated_total = float(evaluated_total)
+    if evaluated_total <= 0:
+        raise HTTPException(status_code=400, detail="Bid must be greater than zero.")
+    fwd = _is_forward(auc)
+    opening = float(auc.reserve_price or 0)
 
-    if auc.auction_type == "Reverse Sourcing":
-        if evaluated_total >= auc.current_best_bid:
-            raise HTTPException(status_code=400, detail=f"Evaluated total must be lower than current best: {cur} {auc.current_best_bid:,.2f}")
+    # A supplier may re-bid any time, as long as each bid improves on their OWN previous bid.
+    # They do not have to beat the current leader in one step - that is how rank climbs.
+    if last_receipt:
+        own = float(last_receipt.evaluated_total)
+        if fwd and evaluated_total < own + min_improve:
+            raise HTTPException(status_code=400, detail=f"Raise your own bid by at least {cur} {min_improve:,.0f} (your last bid: {cur} {own:,.2f}).")
+        if not fwd and evaluated_total > own - min_improve:
+            raise HTTPException(status_code=400, detail=f"Lower your own bid by at least {cur} {min_improve:,.0f} (your last bid: {cur} {own:,.2f}).")
     else:
-        if evaluated_total <= auc.current_best_bid:
-            raise HTTPException(status_code=400, detail=f"Bid must be higher than current best: {cur} {auc.current_best_bid:,.2f}")
+        if fwd and evaluated_total <= opening:
+            raise HTTPException(status_code=400, detail=f"Opening bid must be higher than the starting price {cur} {opening:,.2f}.")
+        if not fwd and opening and evaluated_total >= opening:
+            raise HTTPException(status_code=400, detail=f"Opening bid must be lower than the starting price {cur} {opening:,.2f}.")
 
-    is_new_best = False
-    if auc.auction_type == "Reverse Sourcing":
-        is_new_best = evaluated_total < float(auc.current_best_bid or 0)
-    else:
-        is_new_best = evaluated_total > float(auc.current_best_bid or 0)
-
+    current_best = float(auc.current_best_bid or 0)
+    is_new_best = (evaluated_total > current_best) if fwd else (evaluated_total < current_best)
     if is_new_best:
         auc.current_best_bid = evaluated_total
         auc.best_bidder_id = supplier_id
-
-    if line_items and rates_by_id:
-        for ln in line_items:
-            if ln.id in rates_by_id:
-                ln.last_rate = float(rates_by_id[ln.id])
 
     auc.total_bids_placed = int(auc.total_bids_placed or 0) + 1
     rank = _rank_supplier_on_auction(db, auc, supplier_id, evaluated_total)
@@ -1766,7 +1995,8 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
 
     return {
         "status": "success",
-        "message": f"Bid accepted — evaluated total {cur} {evaluated_total:,.2f} (receipt {receipt_id})",
+        "message": f"Bid accepted — {cur} {evaluated_total:,.2f} · you are now rank {rank} (receipt {receipt_id})",
+        "rank": rank,
         "receipt_id": receipt_id,
         "evaluated_total": evaluated_total,
         "current_best": auc.current_best_bid,

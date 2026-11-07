@@ -60,7 +60,11 @@ cd frontend
 npm run dev:win
 ```
 
-Or one shot from root: `.\start-dev.ps1`
+Or one shot from repo root:
+
+```powershell
+npm run dev:all
+```
 
 **Config:** `frontend/.env` → `VITE_API_URL=http://127.0.0.1:8000/api/v1`
 
@@ -140,7 +144,8 @@ Copy Render URL: `https://<service>.onrender.com`
 |-------|-----|
 | 404 on `/health` or `/monitor` | Old uvicorn on 8000 — kill process, restart `run_server.py` |
 | Neon seed fails mid-run | Re-run `push_to_neon.py` (retries); use `--force` only if needed |
-| Frontend API errors | Check `VITE_API_URL`; CORS on Render |
+| Frontend API errors | Set `VITE_API_URL=https://sellmygoods-backend.onrender.com/api/v1` on Vercel (not the placeholder); redeploy **frontend** |
+| Auctions empty on Vercel but `/health/db` OK on Render | Browser was calling Vercel `/api/v1`, not Render — fix env or use updated `frontend/vercel.json` + `api.js` fallback |
 | Vite/npm path errors | Use `npm run dev:win` or move repo to path without `%^&` |
 
 ---

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 import CreateBidModal from '../../components/CreateBidModal';
+import CreateAuctionFromPRModal from '../../components/CreateAuctionFromPRModal';
 
 const defaultPrData = {
   requisition: {
@@ -46,11 +47,12 @@ const defaultPrData = {
   ]
 };
 
-export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreated }) {
+export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreated, onAuctionCreated }) {
   const isCreate = prId == null;
   const [data, setData] = useState(isCreate ? null : defaultPrData);
   const [loading, setLoading] = useState(!isCreate);
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
+  const [isAuctionModalOpen, setIsAuctionModalOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState('');
   const [createForm, setCreateForm] = useState({
     description: '',
@@ -256,6 +258,13 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
             </button>
           )}
 
+          <button
+            onClick={() => setIsAuctionModalOpen(true)}
+            style={{ padding: '8px 16px', backgroundColor: '#b65c16', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+          >
+            ⚡ Create Auction
+          </button>
+
           {pr.status === 'Approved' && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -442,6 +451,17 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
         </div>
       </div>
 
+      {isAuctionModalOpen && (
+        <CreateAuctionFromPRModal
+          pr={pr}
+          lines={data.lines || []}
+          onClose={() => setIsAuctionModalOpen(false)}
+          onCreated={(auc) => {
+            setIsAuctionModalOpen(false);
+            if (onAuctionCreated) onAuctionCreated(auc.id);
+          }}
+        />
+      )}
       {/* Create Bid Modal (Image 19) */}
       <CreateBidModal
         isOpen={isBidModalOpen}

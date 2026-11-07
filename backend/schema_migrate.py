@@ -20,6 +20,20 @@ def ensure_postgres_schema() -> None:
         ("currency", "VARCHAR DEFAULT 'USD'"),
         ("extensions_used", "INTEGER DEFAULT 0"),
         ("max_extensions", "INTEGER DEFAULT 5"),
+        ("requisition_id", "INTEGER"),
+    ]
+    requisition_columns = [
+        ("netsuite_internal_id", "VARCHAR"),
+        ("netsuite_status", "VARCHAR"),
+        ("subsidiary", "VARCHAR"),
+        ("source", "VARCHAR DEFAULT 'local'"),
+        ("sync_status", "VARCHAR DEFAULT 'Local'"),
+        ("last_synced_at", "TIMESTAMP"),
+    ]
+    requisition_line_columns = [
+        ("netsuite_line_id", "VARCHAR"),
+        ("item_name", "VARCHAR"),
+        ("delivery_requirement", "VARCHAR"),
     ]
 
     with engine.connect() as conn:
@@ -28,3 +42,10 @@ def ensure_postgres_schema() -> None:
             autocommit.execute(
                 text(f"ALTER TABLE auctions ADD COLUMN IF NOT EXISTS {col} {typedef}")
             )
+        for col, typedef in requisition_columns:
+            autocommit.execute(text(f"ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS {col} {typedef}"))
+        for col, typedef in requisition_line_columns:
+            autocommit.execute(text(f"ALTER TABLE requisition_lines ADD COLUMN IF NOT EXISTS {col} {typedef}"))
+        autocommit.execute(
+            text("CREATE UNIQUE INDEX IF NOT EXISTS ux_requisitions_netsuite_id ON requisitions (netsuite_internal_id)")
+        )

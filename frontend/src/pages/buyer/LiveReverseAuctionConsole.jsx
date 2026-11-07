@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
+import AuctionBarCharts from '../../components/AuctionBarCharts';
 
 function formatMoney(amount, currency = 'INR') {
   if (amount == null || Number.isNaN(amount)) return '—';
@@ -44,10 +45,13 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
   const [loadError, setLoadError] = useState('');
   const [rates, setRates] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [validation, setValidation] = useState({ ok: true, message: 'Draft passes price validation.' });
   const [flash, setFlash] = useState('');
 
-  const load = useCallback(async () => {
+  const [chartKey, setChartKey] = useState(0);
+  const ratesSeeded = useRef(false);
+
+  // resetRates=true only on first load / right after a bid; background polls never wipe the user's draft.
+  const load = useCallback(async (resetRates = false) => {
     if (!auctionId) {
       setLoadError('No auction selected.');
       setConsoleData(null);
@@ -57,21 +61,24 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     try {
       const res = await api.getAuctionLiveConsole(auctionId);
       setConsoleData(res);
-      const init = {};
-      (res.lines || []).forEach((l) => {
-        init[l.id] = l.last_rate;
-      });
-      setRates(init);
+      if (resetRates || !ratesSeeded.current) {
+        const init = {};
+        (res.lines || []).forEach((l) => {
+          init[l.id] = l.last_rate;
+        });
+        setRates(init);
+        ratesSeeded.current = true;
+      }
     } catch (e) {
       console.error(e);
-      setConsoleData(null);
-      setLoadError(e.message || 'Could not load live console.');
+      setLoadError((prev) => prev || e.message || 'Could not load live console.');
     }
   }, [auctionId]);
 
   useEffect(() => {
-    load();
-    const poll = setInterval(load, 12000);
+    ratesSeeded.current = false;
+    load(true);
+    const poll = setInterval(() => load(false), 4000);
     return () => clearInterval(poll);
   }, [load]);
 
@@ -82,7 +89,7 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
   const history = consoleData?.bid_history || [];
   const currency = auction?.currency || 'INR';
   const biddingAllowed = consoleData?.bidding_allowed !== false && auction?.status === 'Live';
-  const freight = commercial.freight_fixed ?? auction?.freight_fixed ?? 85000;
+  const freight = Number(commercial.freight_fixed ?? auction?.freight_fixed ?? 0) || 0;
   const taxRate = auction?.tax_rate_pct ?? 18;
 
   const { label: timerLabel } = useAuctionCountdown(auction?.end_time);
@@ -97,27 +104,41 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     return { material, freight, tax, total: material + freight + tax };
   }, [lines, rates, freight, taxRate]);
 
-  useEffect(() => {
+  const validation = useMemo(() => {
     const minImp = auction?.min_bid_improvement ?? 5000;
     const last = session.your_last_accepted_total;
-    const best = auction?.current_best_bid;
-    if (best != null && breakdown.total >= best) {
-      setValidation({
-        ok: false,
-        message: `Evaluated total must be lower than current best (${formatMoney(best, currency)}).`,
-      });
-    } else if (last != null && breakdown.total > last - minImp) {
-      setValidation({
-        ok: false,
-        message: `Improve evaluated total by at least ${formatMoney(minImp, currency)} vs your last bid.`,
-      });
-    } else {
-      setValidation({ ok: true, message: 'Draft passes price validation.' });
+    const opening = auction?.reserve_price;
+    const badLine = lines.find((l) => !(Number(rates[l.id] ?? l.last_rate) > 0));
+    if (badLine) {
+      return { ok: false, message: `Enter a rate greater than 0 for ${badLine.line_code}.` };
     }
-  }, [breakdown.total, session.your_last_accepted_total, auction, currency]);
+    if (last != null && breakdown.total > last - minImp) {
+      return { ok: false, message: `Total must be at most ${formatMoney(last - minImp, currency)} (at least ${formatMoney(minImp, currency)} below your last bid of ${formatMoney(last, currency)}).` };
+    }
+    if (last == null && opening && breakdown.total >= opening) {
+      return { ok: false, message: `Opening bid must be lower than the starting price (${formatMoney(opening, currency)}).` };
+    }
+    const leader = session.leader_total;
+    const wouldLead = leader == null || breakdown.total < leader;
+    return { ok: true, message: wouldLead ? 'Valid — this bid would take rank 1.' : 'Valid — this bid improves your position.' };
+  }, [breakdown.total, rates, lines, session.your_last_accepted_total, session.leader_total, auction, currency]);
 
   const handleRateChange = (lineId, value) => {
     setRates((prev) => ({ ...prev, [lineId]: value === '' ? '' : Number(value) }));
+  };
+
+  // Scale every line rate down proportionally so the evaluated total lands on `target`.
+  const applyTarget = (target) => {
+    if (target == null || !lines.length) return;
+    const base = lines.reduce((s, l) => s + Number(l.last_rate) * Number(l.quantity), 0);
+    const neededMaterial = target / (1 + taxRate / 100) - freight;
+    if (base <= 0 || neededMaterial <= 0) return;
+    const scale = neededMaterial / base;
+    const next = {};
+    lines.forEach((l) => {
+      next[l.id] = Math.floor(Number(l.last_rate) * scale * 100) / 100;
+    });
+    setRates(next);
   };
 
   const handleSubmit = async () => {
@@ -132,7 +153,8 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
         bid_amount: breakdown.total,
       });
       setFlash(res.message || 'Bid submitted.');
-      await load();
+      setChartKey((k) => k + 1);
+      await load(true);
     } catch (err) {
       alert(err.message || 'Bid rejected');
     } finally {
@@ -140,7 +162,7 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     }
   };
 
-  if (loadError) {
+  if (loadError && !consoleData) {
     return (
       <div style={{ padding: 24 }}>
         {onBack && (
@@ -224,7 +246,28 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
         </div>
         <div className="card-enterprise" style={{ padding: 16, textAlign: 'center' }}>
           <div style={{ fontSize: 11, color: '#73767b', fontWeight: 600 }}>YOUR CURRENT RANK</div>
-          <div style={{ fontSize: 48, fontWeight: 800, color: '#432177', lineHeight: 1.1 }}>{session.your_current_rank ?? '—'}</div>
+          <div style={{ fontSize: 48, fontWeight: 800, color: session.your_current_rank === 1 ? '#0f9d78' : '#432177', lineHeight: 1.1 }}>
+            {session.your_current_rank ?? '—'}
+            {session.total_bidders ? <span style={{ fontSize: 16, color: '#73767b', fontWeight: 600 }}> / {session.total_bidders}</span> : null}
+          </div>
+          {session.your_current_rank === 1 ? (
+            <div style={{ fontSize: 12, color: '#0f9d78', fontWeight: 700, marginTop: 4 }}>You are leading 🏆</div>
+          ) : session.your_current_rank ? (
+            <div style={{ marginTop: 8, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {session.bid_to_gain_one_rank != null && session.bid_to_gain_one_rank !== session.bid_to_take_lead && (
+                <button type="button" onClick={() => applyTarget(session.bid_to_gain_one_rank)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: '1px solid #432177', background: '#fff', color: '#432177', cursor: 'pointer' }}>
+                  Climb 1 rank ≤ {formatMoney(session.bid_to_gain_one_rank, currency)}
+                </button>
+              )}
+              {session.bid_to_take_lead != null && (
+                <button type="button" onClick={() => applyTarget(session.bid_to_take_lead)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: '#432177', color: '#fff', cursor: 'pointer' }}>
+                  Take rank 1 ≤ {formatMoney(session.bid_to_take_lead, currency)}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: '#73767b', marginTop: 4 }}>Place a bid to get ranked</div>
+          )}
         </div>
         <div className="card-enterprise" style={{ padding: 16 }}>
           <div style={{ fontSize: 11, color: '#73767b', fontWeight: 600 }}>VISIBILITY</div>
@@ -233,9 +276,9 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.9fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 520px), 1fr))', gap: 16, marginBottom: 16 }}>
         {/* Line bid entry */}
-        <div className="card-enterprise" style={{ padding: 20, overflow: 'hidden' }}>
+        <div className="card-enterprise" style={{ padding: 20, overflowX: 'auto', minWidth: 0 }}>
           <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700 }}>Enter revised unit prices</h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead style={{ background: '#fcfcfd', color: '#73767b', borderBottom: '1px solid #e6e6e9' }}>
@@ -343,9 +386,13 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
               cursor: validation.ok ? 'pointer' : 'not-allowed',
             }}
           >
-            {submitting ? 'Submitting…' : 'Review and submit bid'}
+            {submitting ? 'Submitting…' : session.your_last_accepted_total != null ? 'Submit next bid to improve rank' : 'Submit bid'}
           </button>
         </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <AuctionBarCharts auctionId={auctionId} view="supplier" refreshKey={chartKey} />
       </div>
 
       {/* Commercial conditions */}

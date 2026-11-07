@@ -1,0 +1,10 @@
+{
+  "name": "procurio",
+  "private": true,
+  "description": "Procurio / SellMyGoods — run scripts from repo root",
+  "scripts": {
+    "dev:all": "powershell -NoProfile -ExecutionPolicy Bypass -File ./dev-all.ps1",
+    "dev:backend": "python run_server.py",
+    "dev:frontend": "npm run dev:win --prefix frontend"
+  }
+}

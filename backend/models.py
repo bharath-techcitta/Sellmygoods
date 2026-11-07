@@ -130,6 +130,14 @@ class Requisition(Base):
     current_approver = Column(String, default="Dept Head")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
+    # NetSuite synchronisation metadata (NULL for PRs created locally)
+    netsuite_internal_id = Column(String, nullable=True, unique=True, index=True)
+    netsuite_status = Column(String, nullable=True)     # raw NetSuite status code/text
+    subsidiary = Column(String, nullable=True)
+    source = Column(String, default="local")            # local | netsuite
+    sync_status = Column(String, default="Local")       # Local | Synced | Error
+    last_synced_at = Column(DateTime, nullable=True)
+
     # downstream references
     bid_id = Column(Integer, nullable=True)
     po_id = Column(Integer, nullable=True)
@@ -148,6 +156,9 @@ class RequisitionLine(Base):
     unit_price = Column(Float, default=0.0)
     amount = Column(Float, default=0.0)
     status = Column(String, default="Pending")
+    netsuite_line_id = Column(String, nullable=True)
+    item_name = Column(String, nullable=True)
+    delivery_requirement = Column(String, nullable=True)
 
 class SourcingEvent(Base):
     __tablename__ = "sourcing_events"
@@ -326,6 +337,7 @@ class Auction(Base):
     currency = Column(String, default="USD")
     extensions_used = Column(Integer, default=0)
     max_extensions = Column(Integer, default=5)
+    requisition_id = Column(Integer, nullable=True, index=True)   # source PR (NetSuite-synced or local)
 
 class AuctionLineItem(Base):
     __tablename__ = "auction_line_items"

@@ -47,3 +47,6 @@ dist/
 .DS_Store
 Thumbs.db
 
+
+# Playwright MCP scratch
+.playwright-mcp/

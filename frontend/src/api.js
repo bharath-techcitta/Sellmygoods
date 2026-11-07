@@ -12,17 +12,43 @@ function normalizeApiBase(url) {
   return `${base}/api/v1`;
 }
 
-const envApiUrl = normalizeApiBase(
-  import.meta.env?.VITE_API_URL || (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL)
-);
+const rawEnvUrl =
+  import.meta.env?.VITE_API_URL || (typeof window !== 'undefined' && window.__ENV__?.VITE_API_URL);
 
+function isPlaceholderApiUrl(url) {
+  if (!url || typeof url !== 'string') return true;
+  return /your-render|example\.com|<[^>]+>/i.test(url);
+}
+
+/** Render web service name from render.yaml / DEPLOYMENT_GUIDE (override with VITE_API_URL). */
+export const DEFAULT_PRODUCTION_API = 'https://sellmygoods-backend.onrender.com/api/v1';
+
+const envApiUrl = isPlaceholderApiUrl(rawEnvUrl) ? null : normalizeApiBase(rawEnvUrl);
+
+const isVercelHost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname.endsWith('.vercel.app') || window.location.hostname.includes('vercel.app'));
+
+/** Direct Render URL or same-origin proxy via frontend/vercel.json rewrites. */
 const BASE_URL =
   envApiUrl ||
-  (isLocalDev ? 'http://localhost:8000/api/v1' : '/api/v1');
+  (isLocalDev
+    ? 'http://localhost:8000/api/v1'
+    : isVercelHost
+      ? DEFAULT_PRODUCTION_API
+      : DEFAULT_PRODUCTION_API);
+
+export function getApiBaseUrl() {
+  return BASE_URL;
+}
 
 if (typeof window !== 'undefined' && !envApiUrl && !isLocalDev) {
   console.warn(
-    '[Procurio] VITE_API_URL is not set on Vercel. Role switch and API calls will fail unless you point the frontend at your Render backend.'
+    '[Procurio] VITE_API_URL is not set at build time. Using',
+    BASE_URL,
+    isVercelHost
+      ? '(Vercel proxy — ensure vercel.json rewrites /api/v1 to your Render URL)'
+      : '(relative /api/v1 — only works if the host proxies to Render)'
   );
 }
 
@@ -36,11 +62,29 @@ async function request(endpoint, options = {}) {
 
   try {
     const res = await fetch(url, { ...options, headers });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Network response was not ok' }));
-      throw new Error(err.detail || `Request failed with status ${res.status}`);
+    const text = await res.text();
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+      throw new Error(
+        `Wrong API URL — received the Vercel app page instead of JSON. Set VITE_API_URL to https://sellmygoods-backend.onrender.com/api/v1 and redeploy, or deploy the latest frontend with vercel.json proxy. (Called ${url})`
+      );
     }
-    return await res.json();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      throw new Error(`Invalid JSON from ${url} (${res.status})`);
+    }
+    if (!res.ok) {
+      const d = data && data.detail;
+      const msg = typeof d === 'string' ? d
+        : d && d.message ? d.message
+        : d && Array.isArray(d.reasons) ? d.reasons.join(' ')
+        : Array.isArray(d) ? d.map((x) => x.msg || JSON.stringify(x)).join('; ')
+        : `Request failed with status ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
   } catch (error) {
     console.error(`API Error on ${endpoint}:`, error);
     throw error;
@@ -80,6 +124,11 @@ export const api = {
   getRequisitions: (status = '', search = '') =>
     request(`/requisitions?status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`),
   getRequisitionDetail: (id) => request(`/requisitions/${id}`),
+  // NetSuite purchase requests
+  getNetsuiteStatus: () => request('/netsuite/status'),
+  syncPurchaseRequests: (full = false) => request('/purchase-requests/sync', { method: 'POST', body: JSON.stringify({ full }) }),
+  getPrAuctionEligibility: (id) => request(`/purchase-requests/${id}/auction-eligibility`),
+  createAuctionFromPr: (id, data) => request(`/purchase-requests/${id}/create-auction`, { method: 'POST', body: JSON.stringify(data) }),
   createRequisition: (data) => request('/requisitions', { method: 'POST', body: JSON.stringify(data) }),
   submitRequisition: (id) => request(`/requisitions/${id}/submit`, { method: 'POST' }),
   convertRequisition: (id, conversion_type, supplier_id = 1) =>
@@ -114,6 +163,7 @@ export const api = {
   updateAuction: (id, data) => request(`/auctions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   getAuctionLiveConsole: (id) => request(`/auctions/${id}/live-console`),
   getAuctionMonitor: (id) => request(`/auctions/${id}/monitor`),
+  getAuctionAnalytics: (id, view = 'buyer') => request(`/auctions/${id}/analytics?view=${view}`),
   placeAuctionBid: (id, payload) =>
     request(`/auctions/${id}/bid`, {
       method: 'POST',

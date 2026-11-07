@@ -11,7 +11,7 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
   const [auctionType, setAuctionType] = useState('Reverse Sourcing');
   const [status, setStatus] = useState('Live');
   const [prNumber, setPrNumber] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('INR');
   const [freightFixed, setFreightFixed] = useState(0);
   const [taxRate, setTaxRate] = useState(18);
   const [minImprovement, setMinImprovement] = useState(2500);

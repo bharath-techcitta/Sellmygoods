@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../../api';
+import { api, getApiBaseUrl } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 import AuctionCreatePanel from './AuctionCreatePanel';
 
@@ -19,14 +19,13 @@ export default function AuctionDirectory({ navigateTo, onSelectAuction }) {
   const [showArchive, setShowArchive] = useState(false);
 
   const loadAuctions = useCallback(async () => {
-    setLoading(true);
     setError('');
     try {
       const res = await api.getAuctions();
       setAuctions(Array.isArray(res) ? res : []);
     } catch (e) {
       console.error(e);
-      setError(e.message || 'Could not load auctions from the API.');
+      setError(`${e.message || 'Could not load auctions from the API.'} (API: ${getApiBaseUrl()})`);
       setAuctions([]);
     } finally {
       setLoading(false);
@@ -35,7 +34,7 @@ export default function AuctionDirectory({ navigateTo, onSelectAuction }) {
 
   useEffect(() => {
     loadAuctions();
-    const poll = setInterval(loadAuctions, 15000);
+    const poll = setInterval(loadAuctions, 5000);
     return () => clearInterval(poll);
   }, [loadAuctions]);
 

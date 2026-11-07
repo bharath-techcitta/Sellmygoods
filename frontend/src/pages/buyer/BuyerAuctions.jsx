@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { api } from '../../api';
+import { api, getApiBaseUrl } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 
 function fmtMoney(auc) {
@@ -15,14 +15,13 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    setLoading(true);
     setError('');
     try {
       const res = await api.getAuctions();
       setAuctions(Array.isArray(res) ? res : []);
     } catch (e) {
       console.error(e);
-      setError(e.message || 'Could not load auctions from the API.');
+      setError(`${e.message || 'Could not load auctions from the API.'} (API: ${getApiBaseUrl()})`);
       setAuctions([]);
     } finally {
       setLoading(false);
@@ -31,7 +30,7 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
 
   useEffect(() => {
     load();
-    const poll = setInterval(load, 12000);
+    const poll = setInterval(load, 5000);
     return () => clearInterval(poll);
   }, [load]);
 
