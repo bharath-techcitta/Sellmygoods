@@ -76,11 +76,11 @@ if DATABASE_URL.startswith("sqlite"):
         connect_args={"check_same_thread": False}
     )
 else:
-    # Neon DB Serverless PostgreSQL engine configuration
+    # Managed PostgreSQL (Aiven / Neon / any). Keep the pool small: Aiven's free plan allows few connections.
     engine = create_engine(
         DATABASE_URL,
-        pool_size=10,
-        max_overflow=20,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")),
         pool_pre_ping=True,
         pool_recycle=300,
         connect_args={"connect_timeout": 30},
