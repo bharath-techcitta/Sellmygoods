@@ -41,7 +41,7 @@ def seed_auction_bids(auction_number: str = "AUC_2026_013") -> dict:
 
         # Keep the demo auction open so the bids are visible/live
         now = datetime.datetime.utcnow()
-        if not auc.end_time or auc.end_time < now + datetime.timedelta(hours=3):
+        if auc.status == "Live" and (not auc.end_time or auc.end_time < now + datetime.timedelta(hours=3)):
             auc.end_time = now + datetime.timedelta(hours=3)
         if auc.status == "Live" and (not auc.start_time or auc.start_time > now):
             auc.start_time = now - datetime.timedelta(hours=1)
