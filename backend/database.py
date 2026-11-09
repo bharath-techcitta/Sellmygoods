@@ -82,12 +82,57 @@ else:
         pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
         max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")),
         pool_pre_ping=True,
-        pool_recycle=300,
-        connect_args={"connect_timeout": 30},
+        pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "240")),   # drop idle connections before the server/pooler does
+        connect_args={
+            "connect_timeout": 30,
+            # TCP keepalives stop idle connections being silently dropped by serverless/pooled Postgres
+            "keepalives": 1, "keepalives_idle": 30, "keepalives_interval": 10, "keepalives_count": 5,
+        },
     )
 
+def _install_connect_retry(eng) -> None:
+    """Retry brand-new connections a few times. Serverless/managed Postgres (Neon, Aiven free) can drop or
+    refuse the very first connection while the compute wakes up ("server closed the connection unexpectedly")."""
+    import time
+    from sqlalchemy import event
+    attempts = int(os.getenv("DB_CONNECT_RETRIES", "4"))
+
+    @event.listens_for(eng, "do_connect")
+    def _connect_with_retry(dialect, conn_rec, cargs, cparams):
+        last = None
+        for i in range(attempts):
+            try:
+                return dialect.loaded_dbapi.connect(*cargs, **cparams)
+            except dialect.loaded_dbapi.OperationalError as exc:
+                last = exc
+                msg = str(exc).lower()
+                if "password authentication failed" in msg or "does not exist" in msg:
+                    raise  # permanent: wrong credentials / database - retrying cannot help
+                if i < attempts - 1:
+                    delay = 1.5 * (i + 1)
+                    print(f"[db] connect failed ({str(exc).splitlines()[0][:90]}); retry {i + 1}/{attempts - 1} in {delay:.1f}s")
+                    time.sleep(delay)
+        raise last
+
+
+def run_with_db_retry(fn, attempts: int = 5, delay: float = 3.0, what: str = "database task"):
+    """Run fn(); on a transient DB error wait and try again (used for start-up work like create_all)."""
+    import time
+    from sqlalchemy.exc import OperationalError, DBAPIError
+    for i in range(1, attempts + 1):
+        try:
+            return fn()
+        except (OperationalError, DBAPIError) as exc:
+            if i == attempts:
+                print(f"[db] {what} failed after {attempts} attempts: {str(exc).splitlines()[0][:160]}")
+                raise
+            print(f"[db] {what}: attempt {i}/{attempts} failed ({str(exc).splitlines()[0][:90]}); retrying in {delay}s")
+            time.sleep(delay)
+
+
 if not DATABASE_URL.startswith("sqlite"):
-    _install_dns_fallback(engine, DATABASE_URL)
+    _install_dns_fallback(engine, DATABASE_URL)   # registered first: it fills in hostaddr when system DNS fails
+    _install_connect_retry(engine)                # registered last: performs the connect (with retries)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

@@ -19,7 +19,11 @@ from .models import (
 )
 from .calculations import calculate_quote_line, calculate_budget_balance, calculate_composite_score
 
-Base.metadata.create_all(bind=engine)
+from .database import run_with_db_retry
+try:
+    run_with_db_retry(lambda: Base.metadata.create_all(bind=engine), what="create tables")
+except Exception as _exc:  # do not crash the whole API at import time; start-up will retry and /health still answers
+    print(f"[db] Could not create tables at import ({_exc.__class__.__name__}); will retry at startup.", flush=True)
 
 app = FastAPI(
     title="Procurio Enterprise Procurement API",
@@ -149,7 +153,10 @@ def on_startup():
     else:
         print("Startup: PostgreSQL configured.", flush=True)
     from .schema_migrate import ensure_postgres_schema
-    ensure_postgres_schema()
+    try:
+        run_with_db_retry(ensure_postgres_schema, what="schema migrate")
+    except Exception as exc:
+        print(f"[db] Schema migrate failed: {exc.__class__.__name__}: {str(exc)[:160]}", flush=True)
     _startup_seed_with_retries()
 
 # ----------------- AUTH & SESSION -----------------
