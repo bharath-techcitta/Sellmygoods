@@ -46,7 +46,7 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Auction Terminal</h1>
         <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
-          Bid on <strong>Live</strong> lots only — as a <strong>supplier</strong> on procurement lots (lowest wins) or as a <strong>buyer</strong> on scrap sales (highest wins)
+          Bid on <strong>Live</strong> lots only — as a <strong>buyer</strong> on scrap sales (highest bid wins) or by quoting on procurement lots (lowest bid wins)
         </p>
       </div>
 

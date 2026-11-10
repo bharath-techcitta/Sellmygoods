@@ -144,7 +144,7 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
 
       {fwd && (
         <div style={{ padding: '10px 16px', background: '#fff7e6', border: '1px solid #f3d9a4', color: '#8a5a00', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
-          <strong>Disposal (scrap sale):</strong> you are the <strong>seller</strong> ({m.seller || 'Procurio Corp US (Admin)'}). Bidders are <strong>buyers</strong> — each new bid must be higher, and the highest bid leads.
+          <strong>Disposal (scrap sale):</strong> you are the <strong>supplier (seller)</strong> — {m.seller || 'Procurio Corp US (Admin)'}. Bidders are <strong>buyers</strong> — each new bid must be higher, and the highest bid leads.
         </div>
       )}
 

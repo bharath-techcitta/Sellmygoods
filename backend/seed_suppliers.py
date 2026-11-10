@@ -20,6 +20,34 @@ NEW_SUPPLIERS = [
         postal_code="520007", website="https://srilakshmisteels.example.com", annual_turnover=250000000.0,
         performance_score=92.0, on_time_delivery_rate=96.5, quality_acceptance_rate=98.4, risk_level="Low",
     ),
+    # Extra bidding parties for the scrap-sale demo (they bid as BUYERS on the company's disposal auctions)
+    dict(
+        code="SUP_00109", legal_name="Krishna Metal Recyclers Pvt Ltd", trading_name="Krishna Metal Recyclers",
+        status="Active", type="Scrap Buyer", country="India", email="purchase@krishnametals.example.com",
+        contact_no="+91 99890 22110", created_by="Procurement Team", current_approver="Finance Reviewer",
+        legal_entity_type="Private Limited", tax_identifier="37AAECK5678L1Z2", transaction_currency="INR",
+        payment_terms="Advance / 100% before lifting", address="Gollapudi Industrial Area", city="Vijayawada",
+        postal_code="521225", website="https://krishnametals.example.com", annual_turnover=90000000.0,
+        performance_score=90.0, on_time_delivery_rate=95.0, quality_acceptance_rate=97.0, risk_level="Low",
+    ),
+    dict(
+        code="SUP_00110", legal_name="Deccan Ferro Traders LLP", trading_name="Deccan Ferro Traders",
+        status="Active", type="Scrap Buyer", country="India", email="trade@deccanferro.example.com",
+        contact_no="+91 98660 44556", created_by="Procurement Team", current_approver="Finance Reviewer",
+        legal_entity_type="LLP", tax_identifier="36AAFFD9012M1Z8", transaction_currency="INR",
+        payment_terms="Advance / 100% before lifting", address="Medchal Industrial Park", city="Hyderabad",
+        postal_code="501401", website="https://deccanferro.example.com", annual_turnover=140000000.0,
+        performance_score=91.0, on_time_delivery_rate=96.0, quality_acceptance_rate=97.5, risk_level="Low",
+    ),
+    dict(
+        code="SUP_00111", legal_name="Godavari Steel Re-rollers Ltd", trading_name="Godavari Re-rollers",
+        status="Active", type="Scrap Buyer", country="India", email="scrap@godavarirerollers.example.com",
+        contact_no="+91 97010 77889", created_by="Procurement Team", current_approver="Finance Reviewer",
+        legal_entity_type="Public Limited", tax_identifier="37AABCG3456P1Z1", transaction_currency="INR",
+        payment_terms="Advance / 100% before lifting", address="Kakinada Industrial Estate", city="Kakinada",
+        postal_code="533003", website="https://godavarirerollers.example.com", annual_turnover=320000000.0,
+        performance_score=93.0, on_time_delivery_rate=97.0, quality_acceptance_rate=98.0, risk_level="Low",
+    ),
 ]
 
 # (supplier code, name, designation, email, mobile)
@@ -27,6 +55,9 @@ CONTACTS = [
     ("SUP_00101", "Elena Rostova", "Sales Director", "elena.rostova@precisioncomponents.com", "+1 (555) 201-1100"),
     ("SUP_00102", "Daniel Brooks", "Account Manager", "daniel.brooks@apexlogistics.example.com", "+1 (555) 871-3345"),
     ("SUP_00108", "Ravi Teja", "Business Head", "ravi.teja@srilakshmisteels.example.com", "+91 98480 12345"),
+    ("SUP_00109", "Suresh Kumar", "Purchase Manager", "suresh.kumar@krishnametals.example.com", "+91 99890 22110"),
+    ("SUP_00110", "Anitha Reddy", "Head of Trading", "anitha.reddy@deccanferro.example.com", "+91 98660 44556"),
+    ("SUP_00111", "Mohan Rao", "Procurement Head", "mohan.rao@godavarirerollers.example.com", "+91 97010 77889"),
 ]
 
 

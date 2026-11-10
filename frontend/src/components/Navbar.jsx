@@ -39,10 +39,10 @@ export default function Navbar({
   const [toast, setToast] = useState(null);      // pop-up when a buyer starts an auction
   const seenIds = useRef(null);                  // ids already shown (null until the first load)
 
-  // Logins come from the backend: the procurement buyer + one login per ACTIVE supplier.
+  // Logins come from the backend: the admin (supplier / seller) + one BUYER login per Active party.
   const [roles, setRoles] = useState([
-    { role: 'procurement_buyer', portal: 'admin', supplier_id: null, label: 'Marcus Vance (Procurement Buyer)', person: 'Marcus Vance', company: 'Procurement Buyer', initials: 'MV' },
-    { role: 'supplier_user', portal: 'buyer', supplier_id: 1, label: 'Elena Rostova (Precision Components - Supplier)', person: 'Elena Rostova', company: 'Precision Components', initials: 'ER' },
+    { role: 'procurement_buyer', portal: 'admin', supplier_id: null, label: 'Marcus Vance (Supplier / Seller)', person: 'Marcus Vance', company: 'Supplier (Seller)', initials: 'MV' },
+    { role: 'supplier_user', portal: 'buyer', supplier_id: 1, label: 'Elena Rostova (Precision Components - Buyer)', person: 'Elena Rostova', company: 'Precision Components', initials: 'ER' },
   ]);
   useEffect(() => {
     api.getMe().then((res) => {
@@ -174,7 +174,7 @@ export default function Navbar({
             {activePortal === 'admin' ? 'Admin Portal' : 'Buyer Portal'}
           </span>
           <span style={{ fontSize: '13px', color: '#73767b' }}>
-            {activePortal === 'admin' ? '— Internal Organization Workspace' : '— Supplier Workspace'}
+            {activePortal === 'admin' ? '— Internal Organization Workspace' : '— Buyer Workspace'}
           </span>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function Navbar({
                       Mark all read
                     </button>
                   )}
-                  {currentRole === 'supplier_user' ? 'Supplier workspace' : 'Procurement workspace'}
+                  {currentRole === 'supplier_user' ? 'Buyer workspace' : 'Supplier (seller) workspace'}
                 </span>
               </div>
               {notifications.length === 0 ? (

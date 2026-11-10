@@ -204,8 +204,8 @@ def on_startup():
 # ----------------- AUTH & SESSION -----------------
 
 def _available_roles() -> list:
-    roles = [{"role": "procurement_buyer", "portal": "admin", "supplier_id": None, "name": "Marcus Vance (Procurement Buyer)",
-              "person": "Marcus Vance", "company": "Procurement Buyer", "initials": "MV"}]
+    roles = [{"role": "procurement_buyer", "portal": "admin", "supplier_id": None, "name": "Marcus Vance (Supplier / Seller)",
+              "person": "Marcus Vance", "company": "Supplier (Seller)", "initials": "MV"}]
     try:
         from .database import SessionLocal
         db = SessionLocal()
@@ -214,13 +214,13 @@ def _available_roles() -> list:
                 ident = _supplier_identity(sup.id)
                 roles.append({
                     "role": "supplier_user", "portal": "buyer", "supplier_id": sup.id,
-                    "name": f"{ident['full_name']} ({ident['company']} - Supplier)",
+                    "name": f"{ident['full_name']} ({ident['company']} - Buyer)",
                     "person": ident["full_name"], "company": ident["company"], "initials": _initials(ident["full_name"]),
                 })
         finally:
             db.close()
     except Exception:
-        roles.append({"role": "supplier_user", "portal": "buyer", "supplier_id": 1, "name": "Elena Rostova (Precision Components - Supplier)",
+        roles.append({"role": "supplier_user", "portal": "buyer", "supplier_id": 1, "name": "Elena Rostova (Precision Components - Buyer)",
                       "person": "Elena Rostova", "company": "Precision Components", "initials": "ER"})
     return roles
 
@@ -399,7 +399,7 @@ def _notify_suppliers_auction_live(db: Session, auc: Auction) -> int:
             supplier_id=sup.id, kind="auction_live", auction_id=auc.id, priority="Urgent", module="Auction",
             title=f"Auction is LIVE: {auc.auction_number}",
             message=(
-                f"{auc.title} - scrap/disposal auction is open. Bid as a BUYER: the highest price leads.{closes}"
+                f"{auc.title} - scrap sale is open. Bid as a BUYER: the highest price leads.{closes}"
                 if kind == "forward"
                 else f"{auc.title} - {kind} auction is now open for bidding.{closes}"
             ),

@@ -261,7 +261,7 @@ export default function App() {
                 )
               )}
               {currentRoute === 'buyer-profile' && (
-                <SupplierDetail supplierId={1} onBack={() => navigateTo('buyer-dashboard')} />
+                <SupplierDetail supplierId={currentSupplierId} onBack={() => navigateTo('buyer-dashboard')} />
               )}
               {!BUYER_ROUTES.has(currentRoute) && (
                 <RouteFallback navigateTo={navigateTo} portal="buyer" />

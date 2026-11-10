@@ -21,6 +21,7 @@ const defaultSupplierEvents = [
 
 export default function BuyerDashboard({ navigateTo }) {
   const [events, setEvents] = useState(defaultSupplierEvents);
+  const [company, setCompany] = useState('');   // the logged-in buyer's company (from the session)
   const [wizardCompletion, setWizardCompletion] = useState(() => readSupplierWizardProgress().completion);
 
   const refreshWizardProgress = () => {
@@ -28,6 +29,7 @@ export default function BuyerDashboard({ navigateTo }) {
   };
 
   useEffect(() => {
+    api.getMe().then((res) => setCompany(res?.user?.company || '')).catch(() => {});
     api.getSupplierEvents()
       .then((res) => {
         if (res && res.length) setEvents(res);
@@ -54,10 +56,10 @@ export default function BuyerDashboard({ navigateTo }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#242424' }}>
-              Buyer Portal — Supplier Workspace
+              Buyer Portal — Buyer Workspace
             </h1>
             <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
-              PRECISION COMPONENTS LTD
+              {(company || 'Buyer').toUpperCase()}
             </span>
           </div>
           <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>
