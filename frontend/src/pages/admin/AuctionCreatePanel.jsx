@@ -111,11 +111,11 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
             <input type="number" min="0.5" step="0.5" value={durationHours} onChange={(e) => setDurationHours(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>
-            {auctionType === 'Forward Disposal' ? 'Starting / reserve price — the minimum you (seller) will accept' : 'Opening baseline / reserve (optional)'}
+            Opening baseline / reserve (optional)
             <input type="number" value={reservePrice} onChange={(e) => setReservePrice(e.target.value)} placeholder="Auto from lines" style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>
-            {auctionType === 'Forward Disposal' ? 'Minimum raise per buyer bid' : 'Min improvement / increment'}
+            Min improvement / increment
             <input type="number" value={minImprovement} onChange={(e) => setMinImprovement(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
           {auctionType === 'Reverse Sourcing' && (

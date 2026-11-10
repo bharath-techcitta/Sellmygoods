@@ -77,7 +77,7 @@ export default function AuctionDirectory({ navigateTo, onSelectAuction }) {
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Procurement & Disposal Auctions</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
-            Create lots, go live, monitor bids, and manage bidder consoles (suppliers on procurement lots, buyers on scrap sales)
+            Create lots, go live, monitor bids, and manage supplier consoles
           </p>
         </div>
         <button

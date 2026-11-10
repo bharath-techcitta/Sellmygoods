@@ -3,7 +3,7 @@ import React from 'react';
 export default function Sidebar({ activePortal, currentRoute, navigateTo, isCollapsed }) {
   const adminNav = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'suppliers', label: 'Buyers & Suppliers', icon: '🏢' },
+    { id: 'suppliers', label: 'Suppliers', icon: '🏢' },
     { id: 'categories', label: 'Categories & Items', icon: '📦' },
     { id: 'requisitions', label: 'Requisitions', icon: '📝' },
     { id: 'bids', label: 'Bids & Sourcing', icon: '🎯' },
@@ -18,7 +18,7 @@ export default function Sidebar({ activePortal, currentRoute, navigateTo, isColl
   ];
 
   const buyerNav = [
-    { id: 'buyer-dashboard', label: 'Buyer Dashboard', icon: '📊' },
+    { id: 'buyer-dashboard', label: 'Supplier Dashboard', icon: '📊' },
     { id: 'registration-wizard', label: 'Registration Wizard', icon: '🚀' },
     { id: 'buyer-bids', label: 'My Bids & Invitations', icon: '🎯' },
     { id: 'buyer-pos', label: 'Purchase Orders', icon: '📋' },

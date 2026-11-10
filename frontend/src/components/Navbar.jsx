@@ -41,7 +41,7 @@ export default function Navbar({
 
   // Logins come from the backend: the admin (supplier / seller) + one BUYER login per Active party.
   const [roles, setRoles] = useState([
-    { role: 'procurement_buyer', portal: 'admin', supplier_id: null, label: 'Marcus Vance (Supplier / Seller)', person: 'Marcus Vance', company: 'Supplier (Seller)', initials: 'MV' },
+    { role: 'procurement_buyer', portal: 'admin', supplier_id: null, label: 'Marcus Vance (Supplier)', person: 'Marcus Vance', company: 'Procurement Buyer', initials: 'MV' },
     { role: 'supplier_user', portal: 'buyer', supplier_id: 1, label: 'Elena Rostova (Precision Components - Buyer)', person: 'Elena Rostova', company: 'Precision Components', initials: 'ER' },
   ]);
   useEffect(() => {
@@ -174,7 +174,7 @@ export default function Navbar({
             {activePortal === 'admin' ? 'Admin Portal' : 'Buyer Portal'}
           </span>
           <span style={{ fontSize: '13px', color: '#73767b' }}>
-            {activePortal === 'admin' ? '— Internal Organization Workspace' : '— Buyer Workspace'}
+            {activePortal === 'admin' ? '— Internal Organization Workspace' : '— Supplier Workspace'}
           </span>
         </div>
       </div>
@@ -283,7 +283,7 @@ export default function Navbar({
                       Mark all read
                     </button>
                   )}
-                  {currentRole === 'supplier_user' ? 'Buyer workspace' : 'Supplier (seller) workspace'}
+                  {currentRole === 'supplier_user' ? 'Supplier workspace' : 'Procurement workspace'}
                 </span>
               </div>
               {notifications.length === 0 ? (

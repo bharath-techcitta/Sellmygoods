@@ -56,7 +56,7 @@ export default function BuyerDashboard({ navigateTo }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0, color: '#242424' }}>
-              Buyer Portal — Buyer Workspace
+              Buyer Portal — Supplier Workspace
             </h1>
             <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
               {(company || 'Buyer').toUpperCase()}

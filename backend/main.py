@@ -204,8 +204,8 @@ def on_startup():
 # ----------------- AUTH & SESSION -----------------
 
 def _available_roles() -> list:
-    roles = [{"role": "procurement_buyer", "portal": "admin", "supplier_id": None, "name": "Marcus Vance (Supplier / Seller)",
-              "person": "Marcus Vance", "company": "Supplier (Seller)", "initials": "MV"}]
+    roles = [{"role": "procurement_buyer", "portal": "admin", "supplier_id": None, "name": "Marcus Vance (Supplier)",
+              "person": "Marcus Vance", "company": "Procurement Buyer", "initials": "MV"}]
     try:
         from .database import SessionLocal
         db = SessionLocal()
@@ -398,11 +398,7 @@ def _notify_suppliers_auction_live(db: Session, auc: Auction) -> int:
         db.add(Notification(
             supplier_id=sup.id, kind="auction_live", auction_id=auc.id, priority="Urgent", module="Auction",
             title=f"Auction is LIVE: {auc.auction_number}",
-            message=(
-                f"{auc.title} - scrap sale is open. Bid as a BUYER: the highest price leads.{closes}"
-                if kind == "forward"
-                else f"{auc.title} - {kind} auction is now open for bidding.{closes}"
-            ),
+            message=f"{auc.title} - {kind} auction is now open for bidding.{closes}",
             route="buyer-auction-console",
         ))
         sent += 1
@@ -1684,11 +1680,7 @@ def get_auction_monitor(id: int, db: Session = Depends(get_db)):
     cur = _auction_currency(auc)
     best_total = float(auc.current_best_bid or 0)
     baseline = float(auc.reserve_price or 3500000.0)
-    is_fwd = _is_forward(auc)
-    if is_fwd:   # seller view: how much the highest buyer bid is ABOVE the reserve
-        savings_amt = max(0.0, best_total - baseline)
-    else:        # buyer view: how much the lowest supplier bid is BELOW the baseline
-        savings_amt = max(0.0, baseline - best_total)
+    savings_amt = max(0.0, baseline - best_total)
     savings_pct = round((savings_amt / baseline) * 100, 2) if baseline else 0.0
 
     best_sup = db.query(Supplier).filter(Supplier.id == auc.best_bidder_id).first() if auc.best_bidder_id else None
@@ -1762,8 +1754,6 @@ def get_auction_monitor(id: int, db: Session = Depends(get_db)):
             "current_best_supplier": (
                 f"{leaderboard[0]['supplier_name']} · Rank 1" if leaderboard else (f"{best_name} · Rank 1" if best_name != "—" else "No bids yet")
             ),
-            "is_forward": is_fwd,
-            "seller": "Procurio Corp US (Admin)" if is_fwd else None,
             "provisional_savings_pct": savings_pct,
             "provisional_savings_amount": savings_amt,
             "baseline_total": baseline,

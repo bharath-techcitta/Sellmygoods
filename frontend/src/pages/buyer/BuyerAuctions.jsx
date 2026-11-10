@@ -44,9 +44,9 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Auction Terminal</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Supplier Auction Terminal</h1>
         <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
-          Bid on <strong>Live</strong> lots only — as a <strong>buyer</strong> on scrap sales (highest bid wins) or by quoting on procurement lots (lowest bid wins)
+          Bid on <strong>Live</strong> lots only — reverse (line rates) and forward disposal (single amount)
         </p>
       </div>
 
@@ -76,13 +76,8 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
                   </div>
                   <div style={{ fontWeight: 600, marginTop: 8, fontSize: 14 }}>{auc.title}</div>
                   <div style={{ fontSize: 12, color: '#73767b', marginTop: 6 }}>{auc.auction_type}</div>
-                  <div style={{ marginTop: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 4, background: auc.auction_type === 'Forward Disposal' ? '#fff0d8' : '#e0f2fe', color: auc.auction_type === 'Forward Disposal' ? '#b65c16' : '#0369a1' }}>
-                      {auc.auction_type === 'Forward Disposal' ? 'You bid as a BUYER · highest bid wins' : 'You bid as a SUPPLIER · lowest bid wins'}
-                    </span>
-                  </div>
                   <div style={{ fontSize: 12, color: '#73767b', marginTop: 8 }}>
-                    {auc.auction_type === 'Forward Disposal' ? 'Highest bid' : 'Leading'}: <strong style={{ color: '#0f9d78' }}>{fmtMoney(auc)}</strong>
+                    Leading: <strong style={{ color: '#0f9d78' }}>{fmtMoney(auc)}</strong>
                     {' · '}Bids: <strong>{auc.total_bids_placed ?? 0}</strong>
                   </div>
                   <button
