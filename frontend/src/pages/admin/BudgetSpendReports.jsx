@@ -69,28 +69,28 @@ export default function BudgetSpendReports() {
         <div className="card-enterprise" style={{ padding: '16px' }}>
           <div style={{ fontSize: '12px', color: '#73767b' }}>1. Identified Savings</div>
           <div style={{ fontSize: '22px', fontWeight: '700', color: '#432177', marginTop: '4px' }} className="font-mono-numbers">
-            ${analytics?.savings_summary?.identified?.toLocaleString()}
+            ₹{analytics?.savings_summary?.identified?.toLocaleString()}
           </div>
           <div style={{ fontSize: '11px', color: '#73767b', marginTop: '2px' }}>AI sourcing discovery</div>
         </div>
         <div className="card-enterprise" style={{ padding: '16px' }}>
           <div style={{ fontSize: '12px', color: '#73767b' }}>2. Negotiated Savings</div>
           <div style={{ fontSize: '22px', fontWeight: '700', color: '#3676ce', marginTop: '4px' }} className="font-mono-numbers">
-            ${analytics?.savings_summary?.negotiated?.toLocaleString()}
+            ₹{analytics?.savings_summary?.negotiated?.toLocaleString()}
           </div>
           <div style={{ fontSize: '11px', color: '#73767b', marginTop: '2px' }}>RFQ tender delta</div>
         </div>
         <div className="card-enterprise" style={{ padding: '16px' }}>
           <div style={{ fontSize: '12px', color: '#73767b' }}>3. Contracted Savings</div>
           <div style={{ fontSize: '22px', fontWeight: '700', color: '#b65c16', marginTop: '4px' }} className="font-mono-numbers">
-            ${analytics?.savings_summary?.contracted?.toLocaleString()}
+            ₹{analytics?.savings_summary?.contracted?.toLocaleString()}
           </div>
           <div style={{ fontSize: '11px', color: '#73767b', marginTop: '2px' }}>Locked agreement terms</div>
         </div>
         <div className="card-enterprise" style={{ padding: '16px' }}>
           <div style={{ fontSize: '12px', color: '#73767b' }}>4. Realized Cash Savings</div>
           <div style={{ fontSize: '22px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }} className="font-mono-numbers">
-            ${analytics?.savings_summary?.realized?.toLocaleString()}
+            ₹{analytics?.savings_summary?.realized?.toLocaleString()}
           </div>
           <div style={{ fontSize: '11px', color: '#0f9d78', fontWeight: '600', marginTop: '2px' }}>✓ AP settlement confirmed</div>
         </div>
@@ -125,19 +125,19 @@ export default function BudgetSpendReports() {
                 <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{b.cost_centre}</td>
                 <td style={{ padding: '12px 18px', fontWeight: '600', color: '#242424' }}>{b.department}</td>
                 <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">
-                  ${b.approved_budget?.toLocaleString()}
+                  ₹{b.approved_budget?.toLocaleString()}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', color: '#b65c16' }} className="font-mono-numbers">
-                  ${b.pr_reserved?.toLocaleString()}
+                  ₹{b.pr_reserved?.toLocaleString()}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', color: '#432177' }} className="font-mono-numbers">
-                  ${b.po_committed?.toLocaleString()}
+                  ₹{b.po_committed?.toLocaleString()}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', color: '#555' }} className="font-mono-numbers">
-                  ${b.invoiced_actuals?.toLocaleString()}
+                  ₹{b.invoiced_actuals?.toLocaleString()}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">
-                  ${b.available_balance?.toLocaleString()}
+                  ₹{b.available_balance?.toLocaleString()}
                 </td>
               </tr>
             ))}
@@ -157,7 +157,7 @@ export default function BudgetSpendReports() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                   <span style={{ fontWeight: '500' }}>{cat.category}</span>
                   <span className="font-mono-numbers" style={{ fontWeight: '600' }}>
-                    ${cat.spend?.toLocaleString()} ({cat.share}%)
+                    ₹{cat.spend?.toLocaleString()} ({cat.share}%)
                   </span>
                 </div>
                 <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f1f4', borderRadius: '4px', overflow: 'hidden' }}>
@@ -180,7 +180,7 @@ export default function BudgetSpendReports() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
                   <span style={{ color: '#0f9d78', fontWeight: '500' }}>{sup.status}</span>
                   <span className="font-mono-numbers" style={{ fontWeight: '700', color: '#432177' }}>
-                    ${sup.annual_spend?.toLocaleString()}
+                    ₹{sup.annual_spend?.toLocaleString()}
                   </span>
                 </div>
               </div>

@@ -212,23 +212,23 @@ export default function CompareBidsModal({ eventId, onClose, onAwardSuccess }) {
                     <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#73767b' }}>Gross Total (10 units):</span>
-                        <span className="font-mono-numbers">${s.gross_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="font-mono-numbers">₹{s.gross_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f9d78' }}>
                         <span>Unit Discount Deduction:</span>
-                        <span className="font-mono-numbers">−${s.discount_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="font-mono-numbers">−₹{s.discount_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#73767b' }}>Taxable Net Base:</span>
-                        <span className="font-mono-numbers">${s.taxable_base?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="font-mono-numbers">₹{s.taxable_base?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#73767b' }}>Tax (20% Standard VAT):</span>
-                        <span className="font-mono-numbers">+${s.tax_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="font-mono-numbers">+₹{s.tax_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                       </div>
                       <div style={{ borderTop: '2px solid #e6e6e9', marginTop: '6px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#432177' }}>
                         <span>Evaluated Net Quote:</span>
-                        <span className="font-mono-numbers">${s.net_quote?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        <span className="font-mono-numbers">₹{s.net_quote?.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginTop: '4px' }}>
                         <span style={{ color: '#73767b' }}>Composite Score (Tech + Comm):</span>
@@ -261,7 +261,7 @@ export default function CompareBidsModal({ eventId, onClose, onAwardSuccess }) {
                   <div>
                     <span style={{ fontSize: '12px', color: '#73767b' }}>Total Approved Amount:</span>
                     <div style={{ fontWeight: '700', color: '#0f9d78', fontSize: '15px' }} className="font-mono-numbers">
-                      ${comparisonData?.best_recommendation?.proposed_award_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                      ₹{comparisonData?.best_recommendation?.proposed_award_amount?.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </div>
                   </div>
                 </div>

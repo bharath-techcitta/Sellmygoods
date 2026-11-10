@@ -17,7 +17,7 @@ def ensure_postgres_schema() -> None:
         ("min_bid_improvement", "DOUBLE PRECISION DEFAULT 5000"),
         ("visibility", "VARCHAR DEFAULT 'own_rank_only'"),
         ("terms_version", "VARCHAR DEFAULT '3'"),
-        ("currency", "VARCHAR DEFAULT 'USD'"),
+        ("currency", "VARCHAR DEFAULT 'INR'"),
         ("extensions_used", "INTEGER DEFAULT 0"),
         ("max_extensions", "INTEGER DEFAULT 5"),
         ("requisition_id", "INTEGER"),

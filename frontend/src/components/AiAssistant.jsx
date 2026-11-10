@@ -135,19 +135,19 @@ export default function AiAssistant() {
                 <div style={{ backgroundColor: '#f9f9fb', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #ededf0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#73767b' }}>Supplier Quote:</span>
-                    <span style={{ fontWeight: '600' }}>$36,000.00 (Net)</span>
+                    <span style={{ fontWeight: '600' }}>₹36,000.00 (Net)</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                     <span style={{ color: '#73767b' }}>Historical PO Median:</span>
-                    <span style={{ fontWeight: '600' }}>$33,200.00</span>
+                    <span style={{ fontWeight: '600' }}>₹33,200.00</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f9d78' }}>
                     <span>Estimated Cost Avoidance:</span>
-                    <span style={{ fontWeight: '700' }}>+$2,500.00</span>
+                    <span style={{ fontWeight: '700' }}>+₹2,500.00</span>
                   </div>
                 </div>
                 <div style={{ fontSize: '12px', color: '#555', lineHeight: '1.5' }}>
-                  📌 <strong>Recommendation:</strong> Precision Components Ltd quote is within 4% of 12-month trailing contract baselines. Recommend counter-offering $33,500 based on Q4 volume commitments.
+                  📌 <strong>Recommendation:</strong> Precision Components Ltd quote is within 4% of 12-month trailing contract baselines. Recommend counter-offering ₹33,500 based on Q4 volume commitments.
                 </div>
               </div>
             )}
@@ -216,11 +216,11 @@ export default function AiAssistant() {
                       {copilotResult.suggested_title}
                     </div>
                     <div style={{ fontSize: '11.5px', color: '#73767b', marginBottom: '8px' }}>
-                      Category: {copilotResult.suggested_category} | Est. Total: ${copilotResult.estimated_total?.toLocaleString()}
+                      Category: {copilotResult.suggested_category} | Est. Total: ₹{copilotResult.estimated_total?.toLocaleString()}
                     </div>
                     {copilotResult.proposed_lines.map((l, i) => (
                       <div key={i} style={{ fontSize: '12px', padding: '4px 0', borderTop: '1px solid #eee' }}>
-                        • {l.quantity}x {l.description} (${l.estimated_unit_price} / {l.uom})
+                        • {l.quantity}x {l.description} (₹{l.estimated_unit_price} / {l.uom})
                       </div>
                     ))}
                   </div>

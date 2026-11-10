@@ -25,7 +25,7 @@ const defaultSupplierData = {
     { id: 2, name: 'James Thorne', designation: 'Head of Engineering & QA', email: 'jthorne@precisioncomponents.com', mobile: '+1 (555) 234-8905', is_primary: false, is_signatory: false }
   ],
   banks: [
-    { id: 1, bank_name: 'JPMorgan Chase Bank, N.A.', account_holder: 'Precision Components Ltd', account_number_masked: '••••••••9942', routing_swift: 'CHASUS33XXX', currency: 'USD', is_verified: true }
+    { id: 1, bank_name: 'JPMorgan Chase Bank, N.A.', account_holder: 'Precision Components Ltd', account_number_masked: '••••••••9942', routing_swift: 'CHASUS33XXX', currency: 'INR', is_verified: true }
   ],
   documents: [
     { id: 1, title: 'ISO 9001:2015 Quality Management Certificate', doc_type: 'Certificate', file_name: 'ISO_9001_Precision_2026.pdf', status: 'Verified' },
@@ -201,7 +201,7 @@ export default function SupplierDetail({ supplierId = 1, onBack }) {
                 </div>
                 <div>
                   <span style={{ color: '#73767b' }}>Annual Turnover:</span>
-                  <div style={{ fontWeight: '500' }} className="font-mono-numbers">${(s.annual_turnover || 8500000).toLocaleString()} USD</div>
+                  <div style={{ fontWeight: '500' }} className="font-mono-numbers">₹{(s.annual_turnover || 8500000).toLocaleString()} INR</div>
                 </div>
                 <div>
                   <span style={{ color: '#73767b' }}>Standard Working Hours:</span>
@@ -225,7 +225,7 @@ export default function SupplierDetail({ supplierId = 1, onBack }) {
                 </div>
                 <div>
                   <span style={{ color: '#73767b' }}>Transaction Currency:</span>
-                  <div style={{ fontWeight: '500' }}>{s.transaction_currency || 'USD'}</div>
+                  <div style={{ fontWeight: '500' }}>{s.transaction_currency || 'INR'}</div>
                 </div>
                 <div>
                   <span style={{ color: '#73767b' }}>Tax Exemption:</span>
@@ -355,7 +355,7 @@ export default function SupplierDetail({ supplierId = 1, onBack }) {
               Strategic Sourcing Recommendation
             </div>
             <div style={{ fontSize: '13px', color: '#444' }}>
-              Eligible for direct PO conversions up to $50,000 without mandatory RFx bidding under corporate procurement policy POL-CAT-IT-04.
+              Eligible for direct PO conversions up to ₹50,000 without mandatory RFx bidding under corporate procurement policy POL-CAT-IT-04.
             </div>
           </div>
         </div>

@@ -15,7 +15,7 @@ const defaultInvoices = [
       subtotal: 30000.0,
       tax_amount: 6000.0,
       total_amount: 36000.0,
-      currency: 'USD'
+      currency: 'INR'
     },
     supplier_name: 'Precision Components Ltd'
   },
@@ -31,7 +31,7 @@ const defaultInvoices = [
       subtotal: 22000.0,
       tax_amount: 2500.0,
       total_amount: 24500.0,
-      currency: 'USD'
+      currency: 'INR'
     },
     supplier_name: 'Apex Global Logistics Inc'
   },
@@ -47,7 +47,7 @@ const defaultInvoices = [
       subtotal: 11000.0,
       tax_amount: 1800.0,
       total_amount: 12800.0,
-      currency: 'USD'
+      currency: 'INR'
     },
     supplier_name: 'Vertex Industrial Tools Inc'
   }
@@ -168,7 +168,7 @@ export default function InvoiceManagement() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#73767b', marginTop: '6px' }}>
                     <span>Due: {inv.due_date}</span>
                     <strong style={{ color: '#242424' }} className="font-mono-numbers">
-                      ${inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
+                      ₹{inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
                     </strong>
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export default function InvoiceManagement() {
                 <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #ededf0', borderRadius: '6px' }}>
                   <div style={{ color: '#73767b', marginBottom: '4px' }}>1. Purchase Order</div>
                   <div style={{ fontWeight: '700', color: '#242424' }}>10 Units Ordered</div>
-                  <div className="font-mono-numbers" style={{ color: '#555', marginTop: '2px' }}>$36,000.00 Authorized</div>
+                  <div className="font-mono-numbers" style={{ color: '#555', marginTop: '2px' }}>₹36,000.00 Authorized</div>
                 </div>
                 <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #ededf0', borderRadius: '6px' }}>
                   <div style={{ color: '#73767b', marginBottom: '4px' }}>2. Goods Receipt (GRN)</div>
@@ -227,7 +227,7 @@ export default function InvoiceManagement() {
                 <div style={{ padding: '10px', backgroundColor: '#fff', border: '1px solid #ededf0', borderRadius: '6px' }}>
                   <div style={{ color: '#73767b', marginBottom: '4px' }}>3. Supplier Invoice</div>
                   <div style={{ fontWeight: '700', color: '#432177' }}>10 Units Billed</div>
-                  <div className="font-mono-numbers" style={{ color: '#555', marginTop: '2px' }}>$36,000.00 Claimed</div>
+                  <div className="font-mono-numbers" style={{ color: '#555', marginTop: '2px' }}>₹36,000.00 Claimed</div>
                 </div>
               </div>
 
@@ -240,15 +240,15 @@ export default function InvoiceManagement() {
             <div style={{ borderTop: '1px solid #e6e6e9', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#73767b' }}>Taxable Net Subtotal:</span>
-                <span className="font-mono-numbers">${selectedInvoice.invoice.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono-numbers">₹{selectedInvoice.invoice.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: '#73767b' }}>Sales Tax / VAT (20%):</span>
-                <span className="font-mono-numbers">${selectedInvoice.invoice.tax_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                <span className="font-mono-numbers">₹{selectedInvoice.invoice.tax_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #e6e6e9', paddingTop: '8px', fontWeight: '700', fontSize: '16px', color: '#432177' }}>
                 <span>Total Payable Amount:</span>
-                <span className="font-mono-numbers">${selectedInvoice.invoice.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {selectedInvoice.invoice.currency}</span>
+                <span className="font-mono-numbers">₹{selectedInvoice.invoice.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {selectedInvoice.invoice.currency}</span>
               </div>
             </div>
           </div>

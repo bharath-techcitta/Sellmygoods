@@ -10,7 +10,7 @@ const defaultAdminNotifications = [
 
 const defaultBuyerNotifications = [
   { id: 'b1', title: 'RFQ invitation: RFQ_2026_092', message: 'High Pressure Industrial Ball Valves Replacement', time: 'Awaiting your response', priority: 'High', route: 'buyer-bids', module: 'Bid' },
-  { id: 'b2', title: 'Quote under review — RFQ_2026_091', message: 'Your submission status: Submitted. Net quote $36,000.00.', time: 'Updated recently', priority: 'Medium', route: 'buyer-bids', module: 'Bid' },
+  { id: 'b2', title: 'Quote under review — RFQ_2026_091', message: 'Your submission status: Submitted. Net quote ₹36,000.00.', time: 'Updated recently', priority: 'Medium', route: 'buyer-bids', module: 'Bid' },
   { id: 'b3', title: 'Live auction lot open', message: '1 auction(s) accepting competitive bids now.', time: 'Live now', priority: 'Urgent', route: 'buyer-auctions', module: 'Auction' },
 ];
 

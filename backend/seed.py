@@ -36,11 +36,11 @@ def ensure_contract_clause_data(db) -> None:
     s5 = suppliers.get("SUP_00105")
 
     demo_contracts = [
-        {"contract_number": "CTR_2026_004", "title": "Enterprise Master IT Equipment & Maintenance Agreement", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2026-01-01", "end_date": "2028-12-31", "total_value": 250000.0, "currency": "USD", "owner_name": "Rachel Adams"},
-        {"contract_number": "CTR_2026_005", "title": "Global Express Freight & Regional Fulfilment SLA", "supplier_id": s2.id if s2 else 2, "status": "Active", "contract_type": "Logistics Framework Agreement", "start_date": "2026-02-01", "end_date": "2027-01-31", "total_value": 180000.0, "currency": "USD", "owner_name": "Marcus Vance"},
-        {"contract_number": "CTR_2026_006", "title": "Plant Tooling & Mechanical Maintenance Master Agreement", "supplier_id": s5.id if s5 else 5, "status": "Draft", "contract_type": "Maintenance Service Agreement", "start_date": "2026-12-01", "end_date": "2027-11-30", "total_value": 95000.0, "currency": "USD", "owner_name": "Rachel Adams"},
-        {"contract_number": "CTR_2026_007", "title": "Cloud Infrastructure & SaaS Subscription Framework", "supplier_id": s3.id if s3 else 3, "status": "In Review", "contract_type": "Subscription & License Agreement", "start_date": "2026-03-01", "end_date": "2027-02-28", "total_value": 420000.0, "currency": "USD", "owner_name": "Rachel Adams"},
-        {"contract_number": "CTR_2026_008", "title": "Precision Components Strategic Preferred Supplier MSA", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2025-06-01", "end_date": "2028-05-31", "total_value": 310000.0, "currency": "USD", "owner_name": "Marcus Vance"},
+        {"contract_number": "CTR_2026_004", "title": "Enterprise Master IT Equipment & Maintenance Agreement", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2026-01-01", "end_date": "2028-12-31", "total_value": 250000.0, "currency": "INR", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_005", "title": "Global Express Freight & Regional Fulfilment SLA", "supplier_id": s2.id if s2 else 2, "status": "Active", "contract_type": "Logistics Framework Agreement", "start_date": "2026-02-01", "end_date": "2027-01-31", "total_value": 180000.0, "currency": "INR", "owner_name": "Marcus Vance"},
+        {"contract_number": "CTR_2026_006", "title": "Plant Tooling & Mechanical Maintenance Master Agreement", "supplier_id": s5.id if s5 else 5, "status": "Draft", "contract_type": "Maintenance Service Agreement", "start_date": "2026-12-01", "end_date": "2027-11-30", "total_value": 95000.0, "currency": "INR", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_007", "title": "Cloud Infrastructure & SaaS Subscription Framework", "supplier_id": s3.id if s3 else 3, "status": "In Review", "contract_type": "Subscription & License Agreement", "start_date": "2026-03-01", "end_date": "2027-02-28", "total_value": 420000.0, "currency": "INR", "owner_name": "Rachel Adams"},
+        {"contract_number": "CTR_2026_008", "title": "Precision Components Strategic Preferred Supplier MSA", "supplier_id": s1.id if s1 else 1, "status": "Active", "contract_type": "Master Services Agreement", "start_date": "2025-06-01", "end_date": "2028-05-31", "total_value": 310000.0, "currency": "INR", "owner_name": "Marcus Vance"},
     ]
     for row in demo_contracts:
         if not db.query(Contract).filter(Contract.contract_number == row["contract_number"]).first():
@@ -149,7 +149,7 @@ def ensure_purchase_orders_and_invoices(db) -> None:
                 tax_amount=6000.0,
                 total_amount=36000.0,
                 paid_amount=0.0,
-                currency="USD",
+                currency="INR",
             ),
             Invoice(
                 invoice_number="INV_99215",
@@ -163,7 +163,7 @@ def ensure_purchase_orders_and_invoices(db) -> None:
                 tax_amount=2500.0,
                 total_amount=24500.0,
                 paid_amount=24500.0,
-                currency="USD",
+                currency="INR",
             ),
         ])
     db.commit()
@@ -262,7 +262,7 @@ def ensure_auction_dummy_data(db) -> None:
             "current_best_bid": 52000.0,
             "best_bidder_id": s5.id if s5 else None,
             "total_bids_placed": 18,
-            "currency": "USD",
+            "currency": "INR",
         },
         {
             "auction_number": "AUC_2026_012",
@@ -279,7 +279,7 @@ def ensure_auction_dummy_data(db) -> None:
             "current_best_bid": 28000.0,
             "best_bidder_id": None,
             "total_bids_placed": 0,
-            "currency": "USD",
+            "currency": "INR",
         },
         {
             "auction_number": "AUC_2026_014",
@@ -298,7 +298,7 @@ def ensure_auction_dummy_data(db) -> None:
             "total_bids_placed": 11,
             "freight_fixed": 4200.0,
             "tax_rate_pct": 18.0,
-            "currency": "USD",
+            "currency": "INR",
             "extensions_used": 0,
             "max_extensions": 5,
         },
@@ -316,7 +316,7 @@ def ensure_auction_dummy_data(db) -> None:
             "current_best_bid": 15800.0,
             "best_bidder_id": s1.id if s1 else None,
             "total_bids_placed": 24,
-            "currency": "USD",
+            "currency": "INR",
         },
         {
             "auction_number": "AUC_2026_016",
@@ -352,7 +352,7 @@ def ensure_auction_dummy_data(db) -> None:
             "current_best_bid": 887500.0,
             "best_bidder_id": s1.id if s1 else None,
             "total_bids_placed": 32,
-            "currency": "USD",
+            "currency": "INR",
         },
         {
             "auction_number": "AUC_2026_018",
@@ -371,7 +371,7 @@ def ensure_auction_dummy_data(db) -> None:
             "total_bids_placed": 7,
             "freight_fixed": 0.0,
             "tax_rate_pct": 12.0,
-            "currency": "USD",
+            "currency": "INR",
         },
     ]
 
@@ -516,11 +516,55 @@ def ensure_budget_rows(db) -> None:
     db.commit()
 
 
+def normalize_rupee_display(db) -> dict:
+    """Idempotent: everything is shown in rupees. Turns stored "$" signs into the rupee sign and USD currency
+    codes into INR in demo data (text columns, JSON columns, currency columns). Skips the users table and any
+    password/hash/token column. Runs at every start; it only touches rows that still contain "$" / "USD"."""
+    import json as _json
+    from sqlalchemy import JSON, String, Text, func as _func
+
+    def fix(v):
+        if isinstance(v, str):
+            return v.replace("$", "₹") if "$" in v else v
+        if isinstance(v, list):
+            return [fix(x) for x in v]
+        if isinstance(v, dict):
+            return {k: fix(x) for k, x in v.items()}
+        return v
+
+    touched = {"currency": 0, "text": 0, "json": 0}
+    skip_tables = {"users"}
+    skip_cols = ("pass", "hash", "secret", "token")
+    for table in Base.metadata.sorted_tables:
+        if table.name in skip_tables or "id" not in table.c:
+            continue
+        for col in table.columns:
+            name = col.name
+            if any(k in name for k in skip_cols):
+                continue
+            if name == "currency" or name.endswith("_currency"):
+                r = db.execute(table.update().where(col == "USD").values({name: "INR"}))
+                touched["currency"] += r.rowcount or 0
+            elif isinstance(col.type, JSON):
+                for row in db.execute(table.select().with_only_columns(table.c.id, col)).all():
+                    if row[1] is not None and "$" in _json.dumps(row[1], ensure_ascii=False):
+                        db.execute(table.update().where(table.c.id == row[0]).values({name: fix(row[1])}))
+                        touched["json"] += 1
+            elif isinstance(col.type, (String, Text)):
+                r = db.execute(table.update().where(col.like("%$%")).values({name: _func.replace(col, "$", "₹")}))
+                touched["text"] += r.rowcount or 0
+    db.commit()
+    return touched
+
+
 def ensure_supplemental_data(db) -> None:
     """Idempotent extras so detail pages (PR/PO) are never empty after seed."""
     ensure_purchase_orders_and_invoices(db)
     ensure_auction_dummy_data(db)
     ensure_budget_rows(db)
+    import os as _os
+    if _os.getenv("NORMALIZE_RUPEE_DISPLAY", "true").strip().lower() not in ("0", "false", "no", "off"):
+        normalize_rupee_display(db)   # stored "$" -> rupee sign, USD -> INR (idempotent); set NORMALIZE_RUPEE_DISPLAY=false to skip
     pr2 = db.query(Requisition).filter(Requisition.pr_number == "PR_00085").first()
     if pr2 and not db.query(RequisitionLine).filter(RequisitionLine.requisition_id == pr2.id).first():
         item3 = db.query(Item).filter(Item.sku == "IND-VLV-22").first()
@@ -626,7 +670,7 @@ def ensure_supplemental_data(db) -> None:
                 steps_count=2,
                 definition=[
                     {"step": 1, "title": "Buyer Manager Review", "approver_role": "Procurement Lead", "sla_hours": 24, "condition": "All POs"},
-                    {"step": 2, "title": "Finance Budget Commitment", "approver_role": "Finance Controller", "sla_hours": 48, "condition": "Net Amount >= $25,000"},
+                    {"step": 2, "title": "Finance Budget Commitment", "approver_role": "Finance Controller", "sla_hours": 48, "condition": "Net Amount >= ₹25,000"},
                 ],
             )
         )
@@ -640,7 +684,7 @@ def ensure_supplemental_data(db) -> None:
                 steps_count=2,
                 definition=[
                     {"step": 1, "title": "AP 3-Way Match Validation", "approver_role": "AP Analyst", "sla_hours": 24, "condition": "All Invoices"},
-                    {"step": 2, "title": "AP Lead Payment Release", "approver_role": "AP Lead", "sla_hours": 48, "condition": "Match exceptions or amount >= $10,000"},
+                    {"step": 2, "title": "AP Lead Payment Release", "approver_role": "AP Lead", "sla_hours": 48, "condition": "Match exceptions or amount >= ₹10,000"},
                 ],
             )
         )
@@ -711,10 +755,10 @@ def seed_database(force: bool = False):
     db.commit()
 
     # Items
-    item1 = Item(sku="IT-NET-012", name="Cisco Catalyst 9300 48-Port Switch", description="Enterprise layer-3 stackable managed gigabit switch with PoE+", category_id=cat_net.id, uom="Unit", unit_price=3200.0, currency="USD")
-    item2 = Item(sku="IT-NB-001", name="Dell XPS Developer Workstation 32GB", description="16-inch high performance developer edition with 1TB NVMe SSD", category_id=cat_comp.id, uom="Unit", unit_price=1850.0, currency="USD")
-    item3 = Item(sku="IND-VLV-22", name="Stainless Steel Industrial Flanged Ball Valve 2\"", description="High pressure 1000 WOG rating with PTFE seals", category_id=cat_ind.id, uom="Piece", unit_price=310.0, currency="USD")
-    item4 = Item(sku="FAC-DS-04", name="Ergonomic Heavy-Duty Dual-Arm Monitor Mount", description="Gas spring counter-balanced desktop mount with cable channels", category_id=cat_fac.id, uom="Set", unit_price=145.0, currency="USD")
+    item1 = Item(sku="IT-NET-012", name="Cisco Catalyst 9300 48-Port Switch", description="Enterprise layer-3 stackable managed gigabit switch with PoE+", category_id=cat_net.id, uom="Unit", unit_price=3200.0, currency="INR")
+    item2 = Item(sku="IT-NB-001", name="Dell XPS Developer Workstation 32GB", description="16-inch high performance developer edition with 1TB NVMe SSD", category_id=cat_comp.id, uom="Unit", unit_price=1850.0, currency="INR")
+    item3 = Item(sku="IND-VLV-22", name="Stainless Steel Industrial Flanged Ball Valve 2\"", description="High pressure 1000 WOG rating with PTFE seals", category_id=cat_ind.id, uom="Piece", unit_price=310.0, currency="INR")
+    item4 = Item(sku="FAC-DS-04", name="Ergonomic Heavy-Duty Dual-Arm Monitor Mount", description="Gas spring counter-balanced desktop mount with cable channels", category_id=cat_fac.id, uom="Set", unit_price=145.0, currency="INR")
     db.add_all([item1, item2, item3, item4])
     db.commit()
 
@@ -737,7 +781,7 @@ def seed_database(force: bool = False):
         tax_identifier="US-EIN-88492019",
         incorporation_date="2014-06-15",
         annual_turnover=8500000.0,
-        transaction_currency="USD",
+        transaction_currency="INR",
         payment_terms="Net 30 Days",
         address="104 Industrial Parkway, Suite 400",
         city="Austin, TX",
@@ -841,7 +885,7 @@ def seed_database(force: bool = False):
     # Supplier Contacts & Banking & Docs for Precision Components
     c1 = SupplierContact(supplier_id=s1_id, name="Elena Rostova", designation="Director of Strategic Accounts", email="elena.rostova@precisioncomponents.com", mobile="+1 (555) 234-8901", is_primary=True, is_signatory=True)
     c2 = SupplierContact(supplier_id=s1_id, name="James Thorne", designation="Head of Engineering & QA", email="jthorne@precisioncomponents.com", mobile="+1 (555) 234-8905", is_primary=False, is_signatory=False)
-    b1 = SupplierBank(supplier_id=s1_id, bank_name="JPMorgan Chase Bank, N.A.", account_holder="Precision Components Ltd", account_number_masked="••••••••9942", routing_swift="CHASUS33XXX", currency="USD", is_verified=True)
+    b1 = SupplierBank(supplier_id=s1_id, bank_name="JPMorgan Chase Bank, N.A.", account_holder="Precision Components Ltd", account_number_masked="••••••••9942", routing_swift="CHASUS33XXX", currency="INR", is_verified=True)
     d1 = SupplierDoc(supplier_id=s1_id, title="ISO 9001:2015 Quality Management Certificate", doc_type="Certificate", file_name="ISO_9001_Precision_2026.pdf", status="Verified")
     d2 = SupplierDoc(supplier_id=s1_id, title="Certificate of Incorporation & Good Standing", doc_type="License", file_name="Cert_Incorporation_DE.pdf", status="Verified")
     d3 = SupplierDoc(supplier_id=s1_id, title="W-9 Federal Tax Certification", doc_type="Tax", file_name="W9_Signed_2026.pdf", status="Verified")
@@ -859,7 +903,7 @@ def seed_database(force: bool = False):
         buyer_name="Marcus Vance",
         department="Information Technology",
         business_entity="Procurio Corp US",
-        currency="USD",
+        currency="INR",
         total_amount=32000.0,
         delivery_date="2026-11-20",
         destination="Central Logistics Hub, Dallas TX",
@@ -878,7 +922,7 @@ def seed_database(force: bool = False):
         buyer_name="Marcus Vance",
         department="Plant Operations",
         business_entity="Procurio Corp US",
-        currency="USD",
+        currency="INR",
         total_amount=15500.0,
         delivery_date="2026-12-05",
         destination="Plant Facility #2, Ohio",
@@ -897,7 +941,7 @@ def seed_database(force: bool = False):
         buyer_name="Marcus Vance",
         department="Information Technology",
         business_entity="Procurio Corp US",
-        currency="USD",
+        currency="INR",
         total_amount=18500.0,
         delivery_date="2026-12-15",
         destination="Headquarters, Austin TX",
@@ -935,7 +979,7 @@ def seed_database(force: bool = False):
         stage="Technical Review",
         open_date=now - datetime.timedelta(days=7),
         close_date=now + datetime.timedelta(days=3),
-        currency="USD",
+        currency="INR",
         payment_terms="Net 30 Days",
         delivery_location="Central Logistics Hub, Dallas TX",
         buyer_name="Marcus Vance",
@@ -953,7 +997,7 @@ def seed_database(force: bool = False):
         stage="Live",
         open_date=now - datetime.timedelta(days=1),
         close_date=now + datetime.timedelta(days=6),
-        currency="USD",
+        currency="INR",
         payment_terms="Net 30 Days",
         delivery_location="Plant Facility #2, Ohio",
         buyer_name="Marcus Vance",
@@ -971,7 +1015,7 @@ def seed_database(force: bool = False):
         stage="Awarded",
         open_date=now - datetime.timedelta(days=20),
         close_date=now - datetime.timedelta(days=5),
-        currency="USD",
+        currency="INR",
         payment_terms="Net 45 Days",
         delivery_location="Global Logistics Hubs",
         buyer_name="Marcus Vance",
@@ -1137,7 +1181,7 @@ def seed_database(force: bool = False):
         tax_amount=6000.0,
         total_amount=36000.0,
         paid_amount=0.0,
-        currency="USD"
+        currency="INR"
     )
     inv2 = Invoice(
         invoice_number="INV_99215",
@@ -1151,7 +1195,7 @@ def seed_database(force: bool = False):
         tax_amount=2500.0,
         total_amount=24500.0,
         paid_amount=24500.0,
-        currency="USD"
+        currency="INR"
     )
     inv3 = Invoice(
         invoice_number="INV_99216",
@@ -1165,7 +1209,7 @@ def seed_database(force: bool = False):
         tax_amount=1800.0,
         total_amount=12800.0,
         paid_amount=12800.0,
-        currency="USD"
+        currency="INR"
     )
     db.add_all([inv1, inv2, inv3])
     db.commit()
@@ -1221,9 +1265,9 @@ def seed_database(force: bool = False):
         is_active=True,
         steps_count=3,
         definition=[
-            {"step": 1, "title": "Department Head Review", "approver_role": "Department Head", "sla_hours": 24, "condition": "Amount > $0"},
-            {"step": 2, "title": "Finance Budget Check & Allocation", "approver_role": "Finance Controller", "sla_hours": 48, "condition": "Amount >= $10,000"},
-            {"step": 3, "title": "CFO / Executive Sign-off", "approver_role": "CFO", "sla_hours": 72, "condition": "Amount >= $50,000"}
+            {"step": 1, "title": "Department Head Review", "approver_role": "Department Head", "sla_hours": 24, "condition": "Amount > ₹0"},
+            {"step": 2, "title": "Finance Budget Check & Allocation", "approver_role": "Finance Controller", "sla_hours": 48, "condition": "Amount >= ₹10,000"},
+            {"step": 3, "title": "CFO / Executive Sign-off", "approver_role": "CFO", "sla_hours": 72, "condition": "Amount >= ₹50,000"}
         ]
     )
     wf_sup = ApprovalWorkflow(

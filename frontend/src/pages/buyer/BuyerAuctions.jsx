@@ -6,7 +6,7 @@ function fmtMoney(auc) {
   if (auc.currency === 'INR') {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(auc.current_best_bid);
   }
-  return `$${auc.current_best_bid?.toLocaleString()}`;
+  return `₹${auc.current_best_bid?.toLocaleString()}`;
 }
 
 export default function BuyerAuctions({ navigateTo, onSelectAuction }) {

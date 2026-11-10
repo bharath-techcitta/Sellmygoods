@@ -21,7 +21,7 @@ const defaultPoData = {
     gross_amount: 32000.0,
     tax_amount: 6000.0,
     net_amount: 36000.0,
-    currency: 'USD'
+    currency: 'INR'
   },
   supplier: {
     id: 1,
@@ -233,15 +233,15 @@ export default function PurchaseOrderDetail({ poId = 1, onBack, navigateTo }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#73767b' }}>Subtotal Gross:</span>
-              <span className="font-mono-numbers">${po.gross_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="font-mono-numbers">₹{po.gross_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#73767b' }}>Standard Tax (20%):</span>
-              <span className="font-mono-numbers">${po.tax_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+              <span className="font-mono-numbers">₹{po.tax_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
             <div style={{ borderTop: '2px solid #e6e6e9', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#432177' }}>
               <span>Total Committed:</span>
-              <span className="font-mono-numbers">${po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {po.currency}</span>
+              <span className="font-mono-numbers">₹{po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {po.currency}</span>
             </div>
             <div style={{ marginTop: '8px', fontSize: '12px', color: '#73767b' }}>
               Payment Terms: <strong style={{ color: '#242424' }}>{po.payment_terms}</strong>
@@ -283,10 +283,10 @@ export default function PurchaseOrderDetail({ poId = 1, onBack, navigateTo }) {
                 </td>
                 <td style={{ padding: '12px 18px' }}>{line.uom}</td>
                 <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">
-                  ${line.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₹{line.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                  ${line.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₹{line.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}

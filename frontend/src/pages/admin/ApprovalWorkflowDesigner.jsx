@@ -19,7 +19,7 @@ export default function ApprovalWorkflowDesigner() {
       step: 1,
       title: 'Department Head Operational Need Review',
       approver_role: 'Assigned Department Manager',
-      condition: 'Triggered for all submissions > $0.00',
+      condition: 'Triggered for all submissions > ₹0.00',
       sla_hours: 24,
       mode: 'Sequential'
     },
@@ -27,7 +27,7 @@ export default function ApprovalWorkflowDesigner() {
       step: 2,
       title: 'Finance Controller Budget Allocation Check',
       approver_role: 'Finance Controller (David Chen)',
-      condition: 'Total Request Amount >= $10,000 USD',
+      condition: 'Total Request Amount >= ₹10,000 INR',
       sla_hours: 48,
       mode: 'Sequential'
     },
@@ -35,7 +35,7 @@ export default function ApprovalWorkflowDesigner() {
       step: 3,
       title: 'Executive / CFO Commercial Authorization',
       approver_role: 'Chief Financial Officer (Executive Board)',
-      condition: 'Total Request Amount >= $50,000 USD',
+      condition: 'Total Request Amount >= ₹50,000 INR',
       sla_hours: 72,
       mode: 'Parallel'
     }

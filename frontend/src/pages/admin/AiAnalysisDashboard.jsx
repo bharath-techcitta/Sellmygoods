@@ -20,7 +20,7 @@ const defaultAiData = {
   },
   talking_points: [
     "Leverage historical volume commitment across PR_00084 and pending Q1 demand to request an additional 4% unit discount.",
-    "Highlight competitive quote from alternative tier-1 distributor offering $3,100 unit pricing with 48-hour delivery.",
+    "Highlight competitive quote from alternative tier-1 distributor offering ₹3,100 unit pricing with 48-hour delivery.",
     "Propose accelerated Net 15 payment terms in exchange for waiving initial warranty surcharge."
   ]
 };
@@ -72,25 +72,25 @@ export default function AiAnalysisDashboard() {
             <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
               <div style={{ color: '#73767b' }}>Current Quoted Net Price</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#242424', marginTop: '4px' }} className="font-mono-numbers">
-                ${data.market_price_intelligence.current_quote?.toLocaleString()}
+                ₹{data.market_price_intelligence.current_quote?.toLocaleString()}
               </div>
             </div>
             <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
               <div style={{ color: '#73767b' }}>Historical PO Median (12 Mo.)</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#432177', marginTop: '4px' }} className="font-mono-numbers">
-                ${data.market_price_intelligence.historical_po_benchmark?.toLocaleString()}
+                ₹{data.market_price_intelligence.historical_po_benchmark?.toLocaleString()}
               </div>
             </div>
             <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
               <div style={{ color: '#73767b' }}>AI Target Negotiation Price</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }} className="font-mono-numbers">
-                ${data.market_price_intelligence.suggested_target_price?.toLocaleString()}
+                ₹{data.market_price_intelligence.suggested_target_price?.toLocaleString()}
               </div>
             </div>
             <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
               <div style={{ color: '#73767b' }}>Estimated Savings Potential</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }} className="font-mono-numbers">
-                +${data.market_price_intelligence.estimated_savings_potential?.toLocaleString()}
+                +₹{data.market_price_intelligence.estimated_savings_potential?.toLocaleString()}
               </div>
             </div>
           </div>

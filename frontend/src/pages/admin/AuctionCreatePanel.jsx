@@ -97,8 +97,7 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
           <label style={{ display: 'block', fontSize: 13 }}>
             Currency
             <select value={currency} onChange={(e) => setCurrency(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, borderRadius: 6, border: '1px solid #e6e6e9' }}>
-              <option value="USD">USD</option>
-              <option value="INR">INR</option>
+                            <option value="INR">INR</option>
             </select>
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>

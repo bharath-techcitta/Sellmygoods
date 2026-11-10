@@ -13,7 +13,7 @@ const defaultBuyerContracts = [
       end_date: '2028-12-31',
       status: 'Active',
       total_value: 250000.0,
-      currency: 'USD'
+      currency: 'INR'
     }
   }
 ];
@@ -67,7 +67,7 @@ export default function BuyerContracts() {
                     <StatusBadge status={c.status} />
                   </td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${c.total_value?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {c.currency}
+                    ₹{c.total_value?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {c.currency}
                   </td>
                 </tr>
               );

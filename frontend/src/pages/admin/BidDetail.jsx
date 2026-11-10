@@ -13,7 +13,7 @@ const defaultEventData = {
     status: 'Technical Review',
     stage: 'Technical Review',
     budget: 60000.0,
-    currency: 'USD',
+    currency: 'INR',
     payment_terms: 'Net 30 Days',
     delivery_location: 'Central Logistics Hub, Dallas TX',
     buyer_name: 'Marcus Vance',
@@ -252,7 +252,7 @@ export default function BidDetail({ eventId = 1, onBack, navigateTo }) {
             </div>
             <div>
               <span style={{ color: '#73767b' }}>Procurement Budget:</span>
-              <div style={{ fontWeight: '700' }} className="font-mono-numbers">${e.budget?.toLocaleString()} {e.currency}</div>
+              <div style={{ fontWeight: '700' }} className="font-mono-numbers">₹{e.budget?.toLocaleString()} {e.currency}</div>
             </div>
             <div>
               <span style={{ color: '#73767b' }}>Bidding Envelope:</span>
@@ -342,7 +342,7 @@ export default function BidDetail({ eventId = 1, onBack, navigateTo }) {
                     {r.total_score} pts
                   </td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${r.net_quote?.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                    ₹{r.net_quote?.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR
                   </td>
                   <td style={{ padding: '12px 18px' }}>
                     <StatusBadge status={r.status} />

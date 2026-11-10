@@ -11,16 +11,16 @@ export default function AdminDashboard({ navigateTo }) {
   });
   const [tasks, setTasks] = useState([
     { id: 1, title: 'Review Onboarding: TechVibe Cloud Systems Corp', record_code: 'SUP_00103', assignee_role: 'Compliance Reviewer', due_date: '2026-11-05', status: 'Pending Approval' },
-    { id: 2, title: 'Approve PR: High Pressure Ball Valves ($15,500.00)', record_code: 'PR_00085', assignee_role: 'Finance Controller', due_date: '2026-11-06', status: 'Pending Approval' },
-    { id: 3, title: '3-Way Matched Invoice Review: Precision Components Ltd ($36,000.00)', record_code: 'INV_99214', assignee_role: 'AP Lead', due_date: '2026-11-04', status: 'Urgent' },
+    { id: 2, title: 'Approve PR: High Pressure Ball Valves (₹15,500.00)', record_code: 'PR_00085', assignee_role: 'Finance Controller', due_date: '2026-11-06', status: 'Pending Approval' },
+    { id: 3, title: '3-Way Matched Invoice Review: Precision Components Ltd (₹36,000.00)', record_code: 'INV_99214', assignee_role: 'AP Lead', due_date: '2026-11-04', status: 'Urgent' },
     { id: 4, title: 'Award Evaluation & Commercial Recommendation (RFQ_2026_091)', record_code: 'RFQ_2026_091', assignee_role: 'Procurement Lead', due_date: '2026-11-07', status: 'High' }
   ]);
   const [activity, setActivity] = useState([
-    { id: 1, actor: 'Sarah Jenkins', action: 'Submitted PR_00084 for IT Core Switches ($32,000.00)', time: '15 mins ago', type: 'PR' },
-    { id: 2, actor: 'Precision Components', action: 'Submitted quote for RFQ_2026_091 ($36,000.00 Net)', time: '45 mins ago', type: 'Bid' },
+    { id: 1, actor: 'Sarah Jenkins', action: 'Submitted PR_00084 for IT Core Switches (₹32,000.00)', time: '15 mins ago', type: 'PR' },
+    { id: 2, actor: 'Precision Components', action: 'Submitted quote for RFQ_2026_091 (₹36,000.00 Net)', time: '45 mins ago', type: 'Bid' },
     { id: 3, actor: 'Marcus Vance', action: 'Issued PO_2026_0142 to Precision Components Ltd', time: '2 hours ago', type: 'PO' },
     { id: 4, actor: 'TechVibe Cloud', action: 'Completed Step 5 of Supplier Onboarding Wizard', time: '4 hours ago', type: 'Supplier' },
-    { id: 5, actor: 'David Chen', action: 'Approved budget allocation for Plant Operations ($15,500.00)', time: 'Yesterday', type: 'Budget' }
+    { id: 5, actor: 'David Chen', action: 'Approved budget allocation for Plant Operations (₹15,500.00)', time: 'Yesterday', type: 'Budget' }
   ]);
 
   useEffect(() => {
@@ -184,7 +184,7 @@ export default function AdminDashboard({ navigateTo }) {
             >
               <div style={{ fontSize: '12px', color: '#73767b' }}>Invoices Ready for AP Settlement</div>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#b65c16', marginTop: '6px' }}>
-                $36,000.00
+                ₹36,000.00
               </div>
             </div>
           </div>

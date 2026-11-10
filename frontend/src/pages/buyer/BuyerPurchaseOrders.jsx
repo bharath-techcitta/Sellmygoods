@@ -12,7 +12,7 @@ const defaultBuyerOrders = [
       delivery_date: '2026-11-20',
       payment_terms: 'Net 30 Days',
       net_amount: 36000.0,
-      currency: 'USD'
+      currency: 'INR'
     }
   }
 ];
@@ -71,7 +71,7 @@ export default function BuyerPurchaseOrders({ navigateTo }) {
                   <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>{po.delivery_date}</td>
                   <td style={{ padding: '12px 18px', color: '#555' }}>{po.payment_terms}</td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {po.currency}
+                    ₹{po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {po.currency}
                   </td>
                   <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                     <button

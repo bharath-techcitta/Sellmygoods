@@ -13,7 +13,7 @@ const defaultEvents = [
     buyer_name: 'Marcus Vance',
     delivery_location: 'Central Logistics Hub, Dallas TX',
     budget: 60000.0,
-    currency: 'USD'
+    currency: 'INR'
   },
   {
     id: 2,
@@ -25,7 +25,7 @@ const defaultEvents = [
     buyer_name: 'Marcus Vance',
     delivery_location: 'Plant Facility #2, Ohio',
     budget: 18000.0,
-    currency: 'USD'
+    currency: 'INR'
   },
   {
     id: 3,
@@ -37,7 +37,7 @@ const defaultEvents = [
     buyer_name: 'Marcus Vance',
     delivery_location: 'Global Logistics Hubs',
     budget: 120000.0,
-    currency: 'USD'
+    currency: 'INR'
   }
 ];
 
@@ -110,7 +110,7 @@ export default function BidList({ navigateTo, onSelectEvent }) {
                 <td style={{ padding: '12px 18px', color: '#555' }}>{e.buyer_name}</td>
                 <td style={{ padding: '12px 18px', color: '#73767b' }}>{e.delivery_location}</td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }} className="font-mono-numbers">
-                  ${e.budget?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {e.currency}
+                  ₹{e.budget?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {e.currency}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                   <button

@@ -464,7 +464,7 @@ def get_notifications(db: Session = Depends(get_db)):
                 items.append({
                     "id": f"bid-update-{ev.id}",
                     "title": f"Quote under review — {ev.code}",
-                    "message": f"Your submission status: {resp.status}. Net quote ${resp.net_quote:,.2f}.",
+                    "message": f"Your submission status: {resp.status}. Net quote ₹{resp.net_quote:,.2f}.",
                     "time": "Updated recently",
                     "priority": "Medium",
                     "route": "buyer-bids",
@@ -583,10 +583,10 @@ def get_notifications(db: Session = Depends(get_db)):
 def get_recent_activity():
     return [
         {"id": 1, "actor": "Sarah Jenkins", "action": "Submitted PR_00084 for IT Core Switches", "time": "15 mins ago", "type": "PR"},
-        {"id": 2, "actor": "Precision Components", "action": "Submitted quote for RFQ_2026_091 ($36,000.00)", "time": "45 mins ago", "type": "Bid"},
+        {"id": 2, "actor": "Precision Components", "action": "Submitted quote for RFQ_2026_091 (₹36,000.00)", "time": "45 mins ago", "type": "Bid"},
         {"id": 3, "actor": "Marcus Vance", "action": "Issued PO_2026_0142 to Precision Components Ltd", "time": "2 hours ago", "type": "PO"},
         {"id": 4, "actor": "TechVibe Cloud", "action": "Completed Step 5 of Supplier Onboarding Wizard", "time": "4 hours ago", "type": "Supplier"},
-        {"id": 5, "actor": "David Chen", "action": "Approved budget allocation for Plant Operations ($15,500.00)", "time": "Yesterday", "type": "Budget"}
+        {"id": 5, "actor": "David Chen", "action": "Approved budget allocation for Plant Operations (₹15,500.00)", "time": "Yesterday", "type": "Budget"}
     ]
 
 # ----------------- SUPPLIERS (E02, E03) -----------------
@@ -755,7 +755,7 @@ class CreateItemRequest(BaseModel):
     description: Optional[str] = ""
     uom: Optional[str] = "Unit"
     unit_price: Optional[float] = 0.0
-    currency: Optional[str] = "USD"
+    currency: Optional[str] = "INR"
 
 @app.post("/api/v1/items")
 def create_item(req: CreateItemRequest, db: Session = Depends(get_db)):
@@ -771,7 +771,7 @@ def create_item(req: CreateItemRequest, db: Session = Depends(get_db)):
         category_id=req.category_id,
         uom=req.uom or "Unit",
         unit_price=float(req.unit_price or 0),
-        currency=req.currency or "USD",
+        currency=req.currency or "INR",
         is_active=True,
     )
     db.add(itm)
@@ -1189,7 +1189,7 @@ def get_bid_comparison(id: int, db: Session = Depends(get_db)):
         "suppliers": suppliers_comp,
         "best_recommendation": {
             "supplier_name": "Precision Components Ltd",
-            "rationale": "Lowest evaluated total cost of ownership ($36,000.00 net inclusive of 5-year hardware SLA), highest technical compliance score (92.0%).",
+            "rationale": "Lowest evaluated total cost of ownership (₹36,000.00 net inclusive of 5-year hardware SLA), highest technical compliance score (92.0%).",
             "proposed_award_amount": 36000.0
         }
     }
@@ -2291,7 +2291,7 @@ def generate_ai_negotiation_proposal(req: AiNegotiationRequest, db: Session = De
         },
         "talking_points": [
             "Leverage historical volume commitment across PR_00084 and pending Q1 demand to request an additional 4% unit discount.",
-            "Highlight competitive quote from alternative tier-1 distributor offering $3,100 unit pricing with 48-hour delivery.",
+            "Highlight competitive quote from alternative tier-1 distributor offering ₹3,100 unit pricing with 48-hour delivery.",
             "Propose accelerated Net 15 payment terms in exchange for waiving initial warranty surcharge."
         ]
     }
@@ -2310,7 +2310,7 @@ def ai_draft_pr(req: AiPrDraftRequest):
             {"description": "10G SFP+ Optical Transceiver Modules", "quantity": 20, "uom": "Piece", "estimated_unit_price": 180.0}
         ],
         "estimated_total": 35600.0,
-        "currency": "USD",
+        "currency": "INR",
         "confidence_reasoning": "Synthesized from historical purchase records in CAT-IT-NET and current supplier catalog agreements."
     }
 

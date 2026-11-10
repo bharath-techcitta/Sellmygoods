@@ -14,7 +14,7 @@ const defaultPRs = [
     status: 'Approved',
     current_approver: 'Finance Director',
     buyer_name: 'Marcus Vance',
-    currency: 'USD',
+    currency: 'INR',
     is_budgeted: true
   },
   {
@@ -28,7 +28,7 @@ const defaultPRs = [
     status: 'Pending Approval',
     current_approver: 'David Chen',
     buyer_name: 'Marcus Vance',
-    currency: 'USD',
+    currency: 'INR',
     is_budgeted: true
   },
   {
@@ -42,7 +42,7 @@ const defaultPRs = [
     status: 'Draft',
     current_approver: 'Marcus Vance',
     buyer_name: 'Marcus Vance',
-    currency: 'USD',
+    currency: 'INR',
     is_budgeted: true
   }
 ];
@@ -274,7 +274,7 @@ export default function RequisitionList({ navigateTo, onSelectPR }) {
                   <td style={{ padding: '12px 16px', color: '#555' }}>{pr.department}</td>
                   <td style={{ padding: '12px 16px', color: '#555' }}>{pr.buyer_name}</td>
                   <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {pr.currency}
+                    ₹{pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {pr.currency}
                   </td>
                   <td style={{ padding: '12px 16px', color: '#73767b' }}>{pr.delivery_date}</td>
                   <td style={{ padding: '12px 16px', color: '#432177', fontWeight: '500' }}>

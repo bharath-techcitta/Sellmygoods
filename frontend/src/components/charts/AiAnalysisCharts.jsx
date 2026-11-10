@@ -28,15 +28,15 @@ export default function AiAnalysisCharts({ data }) {
     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '18px', marginBottom: '24px' }}>
       <div className="card-enterprise" style={{ padding: '20px' }}>
         <BarChart
-          title="Price benchmark comparison ($ thousands)"
+          title="Price benchmark comparison (₹ thousands)"
           items={priceCompare}
           height={180}
-          valueFormatter={(v) => `$${v.toFixed(1)}k`}
+          valueFormatter={(v) => `₹${v.toFixed(1)}k`}
         />
         <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#73767b' }}>
           Estimated savings vs current quote:{' '}
           <strong style={{ color: '#0f9d78' }}>
-            ${intel.estimated_savings_potential?.toLocaleString()}
+            ₹{intel.estimated_savings_potential?.toLocaleString()}
           </strong>
         </p>
       </div>

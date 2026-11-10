@@ -7,7 +7,7 @@ const defaultCategories = [
 ];
 
 const defaultItems = [
-  { sku: 'IT-NET-012', name: 'Cisco Catalyst 9300 48-Port Switch', category: 'Networking Hardware', uom: 'Unit', price: 3200.0, currency: 'USD' },
+  { sku: 'IT-NET-012', name: 'Cisco Catalyst 9300 48-Port Switch', category: 'Networking Hardware', uom: 'Unit', price: 3200.0, currency: 'INR' },
 ];
 
 function mapCategoryRow(c) {
@@ -48,7 +48,7 @@ export default function CategoryItemMaster() {
             category: it.category_name || 'General',
             uom: it.uom,
             price: it.unit_price,
-            currency: it.currency || 'USD',
+            currency: it.currency || 'INR',
           }))
         );
       }
@@ -242,7 +242,7 @@ export default function CategoryItemMaster() {
                   <td style={{ padding: '12px 18px', color: '#73767b' }}>{it.category}</td>
                   <td style={{ padding: '12px 18px' }}>{it.uom}</td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }} className="font-mono-numbers">
-                    ${Number(it.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    ₹{Number(it.price).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td style={{ padding: '12px 18px', color: '#555' }}>{it.currency}</td>
                 </tr>

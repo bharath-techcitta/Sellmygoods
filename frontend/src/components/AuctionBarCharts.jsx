@@ -6,13 +6,13 @@ export function fmtMoney(amount, currency = 'INR') {
   if (currency === 'INR') {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
   }
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
 }
 
 function compact(v, currency) {
   const n = Number(v);
   if (Number.isNaN(n)) return '—';
-  const sym = currency === 'INR' ? '₹' : '$';
+  const sym = currency === 'INR' ? '₹' : '₹';
   if (n >= 10000000 && currency === 'INR') return `${sym}${(n / 10000000).toFixed(2)}Cr`;
   if (n >= 100000 && currency === 'INR') return `${sym}${(n / 100000).toFixed(2)}L`;
   if (n >= 1000000) return `${sym}${(n / 1000000).toFixed(2)}M`;

@@ -50,16 +50,16 @@ export default function BudgetSpendCharts({ budgets, analytics }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px', marginBottom: '24px' }}>
         <div className="card-enterprise" style={{ padding: '20px' }}>
           <BarChart
-            title="Savings pipeline ($ thousands)"
+            title="Savings pipeline (₹ thousands)"
             items={savingsBars}
-            valueFormatter={(v) => `$${v.toFixed(0)}k`}
+            valueFormatter={(v) => `₹${v.toFixed(0)}k`}
           />
         </div>
         <div className="card-enterprise" style={{ padding: '20px' }}>
           <BarChart
-            title="Top supplier annual spend ($ thousands)"
+            title="Top supplier annual spend (₹ thousands)"
             items={supplierBars}
-            valueFormatter={(v) => `$${v.toFixed(0)}k`}
+            valueFormatter={(v) => `₹${v.toFixed(0)}k`}
           />
         </div>
       </div>

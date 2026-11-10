@@ -12,9 +12,9 @@ const defaultClauses = [
 ];
 
 const defaultContracts = [
-  { contract: { id: 1, contract_number: 'CTR_2026_004', title: 'Enterprise Master IT Equipment & Maintenance Agreement', contract_type: 'Master Services Agreement', start_date: '2026-01-01', end_date: '2028-12-31', status: 'Active', total_value: 250000.0, currency: 'USD' }, supplier_name: 'Precision Components Ltd' },
-  { contract: { id: 2, contract_number: 'CTR_2026_005', title: 'Global Express Freight & Regional Fulfilment SLA', contract_type: 'Logistics Framework Agreement', start_date: '2026-02-01', end_date: '2027-01-31', status: 'Active', total_value: 180000.0, currency: 'USD' }, supplier_name: 'Apex Global Logistics Inc' },
-  { contract: { id: 3, contract_number: 'CTR_2026_006', title: 'Plant Tooling & Mechanical Maintenance Master Agreement', contract_type: 'Maintenance Service Agreement', start_date: '2026-12-01', end_date: '2027-11-30', status: 'Draft', total_value: 95000.0, currency: 'USD' }, supplier_name: 'Vertex Industrial Tools Inc' },
+  { contract: { id: 1, contract_number: 'CTR_2026_004', title: 'Enterprise Master IT Equipment & Maintenance Agreement', contract_type: 'Master Services Agreement', start_date: '2026-01-01', end_date: '2028-12-31', status: 'Active', total_value: 250000.0, currency: 'INR' }, supplier_name: 'Precision Components Ltd' },
+  { contract: { id: 2, contract_number: 'CTR_2026_005', title: 'Global Express Freight & Regional Fulfilment SLA', contract_type: 'Logistics Framework Agreement', start_date: '2026-02-01', end_date: '2027-01-31', status: 'Active', total_value: 180000.0, currency: 'INR' }, supplier_name: 'Apex Global Logistics Inc' },
+  { contract: { id: 3, contract_number: 'CTR_2026_006', title: 'Plant Tooling & Mechanical Maintenance Master Agreement', contract_type: 'Maintenance Service Agreement', start_date: '2026-12-01', end_date: '2027-11-30', status: 'Draft', total_value: 95000.0, currency: 'INR' }, supplier_name: 'Vertex Industrial Tools Inc' },
 ];
 
 export default function ContractClauses() {
@@ -160,7 +160,7 @@ export default function ContractClauses() {
                   <td style={{ padding: '12px 18px', color: '#73767b' }}>{c.start_date} → {c.end_date}</td>
                   <td style={{ padding: '12px 18px' }}><StatusBadge status={c.status} /></td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${c.total_value?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {c.currency}
+                    ₹{c.total_value?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {c.currency}
                   </td>
                 </tr>
               );

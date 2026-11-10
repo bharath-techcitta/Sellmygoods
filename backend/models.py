@@ -35,7 +35,7 @@ class Item(Base):
     category_id = Column(Integer, ForeignKey("categories.id"))
     uom = Column(String, default="Unit")
     unit_price = Column(Float, default=0.0)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     preferred_supplier_id = Column(Integer, nullable=True)
     is_active = Column(Boolean, default=True)
 
@@ -62,7 +62,7 @@ class Supplier(Base):
     tax_identifier = Column(String, nullable=True) # PAN / Tax ID / GSTIN
     incorporation_date = Column(String, nullable=True)
     annual_turnover = Column(Float, default=1000000.0)
-    transaction_currency = Column(String, default="USD")
+    transaction_currency = Column(String, default="INR")
     working_hours = Column(String, default="Mon-Fri 09:00 - 18:00")
     payment_terms = Column(String, default="Net 30 Days")
     address = Column(String, nullable=True)
@@ -95,7 +95,7 @@ class SupplierBank(Base):
     account_holder = Column(String)
     account_number_masked = Column(String)
     routing_swift = Column(String)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     is_verified = Column(Boolean, default=False)
 
 class SupplierDoc(Base):
@@ -120,7 +120,7 @@ class Requisition(Base):
     buyer_name = Column(String)
     department = Column(String)
     business_entity = Column(String, default="Procurio Corp US")
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     total_amount = Column(Float, default=0.0)
     delivery_date = Column(String)
     destination = Column(String)
@@ -170,7 +170,7 @@ class SourcingEvent(Base):
     stage = Column(String, default="Published")
     open_date = Column(DateTime)
     close_date = Column(DateTime)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     payment_terms = Column(String, default="Net 30 Days")
     delivery_location = Column(String, default="Central Logistics Hub, Dallas TX")
     buyer_name = Column(String, default="Marcus Vance")
@@ -243,7 +243,7 @@ class PurchaseOrder(Base):
     entity_name = Column(String, default="Procurio Corp US")
     department = Column(String)
     payment_terms = Column(String, default="Net 30 Days")
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     gross_amount = Column(Float, default=0.0)
     tax_amount = Column(Float, default=0.0)
     net_amount = Column(Float, default=0.0)
@@ -288,7 +288,7 @@ class Invoice(Base):
     tax_amount = Column(Float, default=0.0)
     total_amount = Column(Float, default=0.0)
     paid_amount = Column(Float, default=0.0)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
 
 class Contract(Base):
     __tablename__ = "contracts"
@@ -301,7 +301,7 @@ class Contract(Base):
     start_date = Column(String)
     end_date = Column(String)
     total_value = Column(Float, default=150000.0)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     owner_name = Column(String, default="Rachel Adams")
 
 class Clause(Base):
@@ -334,7 +334,7 @@ class Auction(Base):
     min_bid_improvement = Column(Float, default=5000.0)
     visibility = Column(String, default="own_rank_only")
     terms_version = Column(String, default="v3")
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     extensions_used = Column(Integer, default=0)
     max_extensions = Column(Integer, default=5)
     requisition_id = Column(Integer, nullable=True, index=True)   # source PR (NetSuite-synced or local)
@@ -393,7 +393,7 @@ class ApprovalTask(Base):
     requested_by = Column(String)
     assignee_role = Column(String)
     amount = Column(Float, nullable=True)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     priority = Column(String, default="Medium") # Low, Medium, High, Urgent
     due_date = Column(String)
     status = Column(String, default="Pending") # Pending, Approved, Rejected, Clarification Requested

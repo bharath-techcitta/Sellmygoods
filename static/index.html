@@ -942,7 +942,7 @@
                               <td style={{ padding: '12px 18px' }}>{itm.category_name}</td>
                               <td style={{ padding: '12px 18px' }}>{itm.uom}</td>
                               <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                                ${itm.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {itm.currency}
+                                ₹{itm.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {itm.currency}
                               </td>
                               <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '500' }}>{itm.preferred_supplier}</td>
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={itm.is_active ? 'Active' : 'Draft'} /></td>
@@ -1044,7 +1044,7 @@
                                 </span>
                               </td>
                               <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                                ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                                ₹{pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR
                               </td>
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={pr.status} /></td>
                               <td style={{ padding: '12px 18px', textAlign: 'right' }}>
@@ -1079,11 +1079,11 @@
                             <div><strong>Requester:</strong> {selectedPrDetail.requester_name}</div>
                             <div><strong>Target Delivery:</strong> {selectedPrDetail.delivery_date}</div>
                             <div><strong>GL Account:</strong> <span className="font-mono-numbers">6100-Equipment (CC-1020-IT)</span></div>
-                            <div><strong>Requisition Value:</strong> <strong style={{ color: '#432177', fontSize: '15px' }} className="font-mono-numbers">${selectedPrDetail.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</strong></div>
+                            <div><strong>Requisition Value:</strong> <strong style={{ color: '#432177', fontSize: '15px' }} className="font-mono-numbers">₹{selectedPrDetail.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</strong></div>
                           </div>
 
                           <div style={{ backgroundColor: '#f0e5ff', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '12.5px', color: '#432177' }}>
-                            💡 <strong>Section I3 Budget Check:</strong> Approved IT Cost Centre Pool ($50,000.00) has sufficient headroom to cover this requisition. No overrun exception required.
+                            💡 <strong>Section I3 Budget Check:</strong> Approved IT Cost Centre Pool (₹50,000.00) has sufficient headroom to cover this requisition. No overrun exception required.
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -1142,12 +1142,12 @@
                                 <input type="number" min="1" value={newPrQty} onChange={(e) => setNewPrQty(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e6e6e9', fontSize: '12px' }} />
                               </div>
                               <div>
-                                <label style={{ fontSize: '11px', color: '#73767b' }}>Unit Price ($)</label>
+                                <label style={{ fontSize: '11px', color: '#73767b' }}>Unit Price (₹)</label>
                                 <input type="number" step="0.01" value={newPrPrice} onChange={(e) => setNewPrPrice(e.target.value)} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #e6e6e9', fontSize: '12px' }} />
                               </div>
                             </div>
                             <div style={{ marginTop: '10px', textAlign: 'right', fontWeight: '700', fontSize: '14px', color: '#432177' }}>
-                              Estimated Total: ${(Number(newPrQty) * Number(newPrPrice)).toLocaleString(undefined, { minimumFractionDigits: 2 })} USD
+                              Estimated Total: ₹{(Number(newPrQty) * Number(newPrPrice)).toLocaleString(undefined, { minimumFractionDigits: 2 })} INR
                             </div>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
@@ -1188,7 +1188,7 @@
                             <td style={{ padding: '12px 18px', fontWeight: '500' }}>{e.title}</td>
                             <td style={{ padding: '12px 18px' }}><span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>{e.event_type}</span></td>
                             <td style={{ padding: '12px 18px' }}><StatusBadge status={e.status} /></td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }} className="font-mono-numbers">${e.budget?.toLocaleString()} USD</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }} className="font-mono-numbers">₹{e.budget?.toLocaleString()} INR</td>
                             <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                               <button onClick={() => openEvent(e.id)} style={{ padding: '5px 12px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                                 Manage Event →
@@ -1255,7 +1255,7 @@
                             <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>{rObj.response.technical_score}%</td>
                             <td style={{ padding: '12px 18px', color: '#432177', fontWeight: '600' }}>{rObj.response.commercial_score}%</td>
                             <td style={{ padding: '12px 18px', fontWeight: '700' }}>{rObj.response.total_score} pts</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${rObj.response.net_quote?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹{rObj.response.net_quote?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                             <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                               <button onClick={() => openComparison(eventDetail.event.id)} style={{ padding: '4px 10px', border: '1px solid #432177', color: '#432177', background: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                                 View Comparison
@@ -1323,7 +1323,7 @@
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={o.po.status} /></td>
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={o.po.receipt_status} /></td>
                               <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>{o.po.delivery_date}</td>
-                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${o.po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹{o.po.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                             </tr>
                           ))
                         )}
@@ -1390,7 +1390,7 @@
                               </td>
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={inv.invoice.status} /></td>
                               <td style={{ padding: '12px 18px' }}>{inv.invoice.due_date}</td>
-                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${inv.invoice.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹{inv.invoice.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                               <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                                 <button onClick={() => alert(`Invoice ${inv.invoice.invoice_number} approved for payment release.`)} style={{ padding: '5px 12px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                                   Approve
@@ -1446,7 +1446,7 @@
                               <td style={{ padding: '12px 18px', fontWeight: '600' }}>{c.title}</td>
                               <td style={{ padding: '12px 18px' }}>{c.supplier}</td>
                               <td style={{ padding: '12px 18px', color: '#555' }}>{c.term}</td>
-                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">${c.val.toLocaleString()} USD</td>
+                              <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹{c.val.toLocaleString()} INR</td>
                               <td style={{ padding: '12px 18px' }}><StatusBadge status={c.status} /></td>
                             </tr>
                           ))}
@@ -1558,8 +1558,8 @@
                             <td style={{ padding: '12px 18px', fontWeight: '600' }}>{a.title}</td>
                             <td style={{ padding: '12px 18px' }}>{a.auction_type}</td>
                             <td style={{ padding: '12px 18px' }}><StatusBadge status={a.status} /></td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">${a.reserve_price?.toLocaleString()} USD</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '800', color: '#432177' }} className="font-mono-numbers">${a.current_best_bid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">₹{a.reserve_price?.toLocaleString()} INR</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '800', color: '#432177' }} className="font-mono-numbers">₹{a.current_best_bid?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                             <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '600' }}>{a.total_bids_placed || 0}</td>
                           </tr>
                         ))}
@@ -1592,10 +1592,10 @@
                           <tr key={b.id} style={{ borderBottom: '1px solid #f1f1f4' }}>
                             <td style={{ padding: '12px 18px', fontWeight: '700', color: '#432177' }}>{b.cost_centre}</td>
                             <td style={{ padding: '12px 18px', fontWeight: '600' }}>{b.department}</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">${b.approved_budget?.toLocaleString()}</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#b65c16' }} className="font-mono-numbers">${b.pr_reserved?.toLocaleString()}</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#432177' }} className="font-mono-numbers">${b.po_committed?.toLocaleString()}</td>
-                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">${b.available_balance?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">₹{b.approved_budget?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#b65c16' }} className="font-mono-numbers">₹{b.pr_reserved?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', color: '#432177' }} className="font-mono-numbers">₹{b.po_committed?.toLocaleString()}</td>
+                            <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">₹{b.available_balance?.toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1616,7 +1616,7 @@
                           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                             <span>{c.name}</span>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                              <span style={{ fontWeight: '700' }} className="font-mono-numbers">${c.spend.toLocaleString()}</span>
+                              <span style={{ fontWeight: '700' }} className="font-mono-numbers">₹{c.spend.toLocaleString()}</span>
                               <span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '1px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>{c.pct}</span>
                             </div>
                           </div>
@@ -1629,11 +1629,11 @@
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', textAlign: 'center' }}>
                         <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
                           <div style={{ fontSize: '11.5px', color: '#73767b' }}>Identified Savings</div>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#432177', marginTop: '4px' }}>$128,000</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#432177', marginTop: '4px' }}>₹128,000</div>
                         </div>
                         <div style={{ padding: '12px', backgroundColor: '#fcfcfd', border: '1px solid #ededf2', borderRadius: '8px' }}>
                           <div style={{ fontSize: '11.5px', color: '#73767b' }}>Realized In Bank</div>
-                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }}>$61,400</div>
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#0f9d78', marginTop: '4px' }}>₹61,400</div>
                         </div>
                       </div>
                     </div>
@@ -1651,7 +1651,7 @@
                       <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>Approval Workflow Designer & Governance</h1>
                       <p style={{ margin: '4px 0 0 0', fontSize: '13.5px', color: '#73767b' }}>Configure multi-tier authorization thresholds, SLA timeout escalations, and automated rule routing</p>
                     </div>
-                    <button onClick={() => alert("Simulation: Tested on PR_00084 ($32,000.00). Routing: Step 1 (Auto-passed) -> Step 2 (Finance Controller Assigned).")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
+                    <button onClick={() => alert("Simulation: Tested on PR_00084 (₹32,000.00). Routing: Step 1 (Auto-passed) -> Step 2 (Finance Controller Assigned).")} style={{ padding: '9px 16px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
                       ⚡ Test Routing Simulation
                     </button>
                   </div>
@@ -1700,7 +1700,7 @@
                         <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Department Head Review</h3>
                         <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Validates departmental necessity and functional delivery deadline.</p>
                         <div style={{ fontSize: '12px', backgroundColor: '#fff', border: '1px solid #e6e6e9', padding: '8px', borderRadius: '6px' }}>
-                          <div>Threshold: <strong>Up to $10,000.00</strong></div>
+                          <div>Threshold: <strong>Up to ₹10,000.00</strong></div>
                           <div>Role: <strong>Originating Dept Manager</strong></div>
                         </div>
                       </div>
@@ -1714,7 +1714,7 @@
                         <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Financial Controller Audit</h3>
                         <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Verifies Cost Centre GL allocation and budget headroom check.</p>
                         <div style={{ fontSize: '12px', backgroundColor: '#f0e5ff', border: '1px solid #d8b4fe', padding: '8px', borderRadius: '6px', color: '#432177' }}>
-                          <div>Threshold: <strong>$10,000.00 – $50,000.00</strong></div>
+                          <div>Threshold: <strong>₹10,000.00 – ₹50,000.00</strong></div>
                           <div>Role: <strong>David Chen (Finance Controller)</strong></div>
                         </div>
                       </div>
@@ -1728,7 +1728,7 @@
                         <h3 style={{ fontSize: '15px', fontWeight: '700', margin: '0 0 8px 0' }}>Executive / CFO Sign-off</h3>
                         <p style={{ fontSize: '12.5px', color: '#555', margin: '0 0 10px 0' }}>Dual executive authorization for capital commitments above threshold.</p>
                         <div style={{ fontSize: '12px', backgroundColor: '#fff', border: '1px solid #e6e6e9', padding: '8px', borderRadius: '6px' }}>
-                          <div>Threshold: <strong>Exceeds $50,000.00</strong></div>
+                          <div>Threshold: <strong>Exceeds ₹50,000.00</strong></div>
                           <div>Role: <strong>Chief Financial Officer (CFO)</strong></div>
                         </div>
                       </div>
@@ -1815,7 +1815,7 @@
                           { obj: 'Supplier Master Entity', table: 'LFA1 / BusinessPartner_0001', dir: 'Bidirectional', count: '7 Records (100% Synced)', status: 'Synced' },
                           { obj: 'Purchase Orders', table: 'EKKO / BAPI_PO_CREATE1', dir: 'Export to SAP', count: '3 POs Exported', status: 'Synced' },
                           { obj: 'Invoices & 3-Way Match', table: 'RBKP / BAPI_INCOMINGINVOICE', dir: 'Import for Matching', count: '3 Invoices Verified', status: 'Synced' },
-                          { obj: 'Cost Centres & GL Ledgers', table: 'CSKS / FAGLFLEXT', dir: 'Import from SAP', count: '3 Ledgers ($800k Cap)', status: 'Synced' }
+                          { obj: 'Cost Centres & GL Ledgers', table: 'CSKS / FAGLFLEXT', dir: 'Import from SAP', count: '3 Ledgers (₹800k Cap)', status: 'Synced' }
                         ].map((m, i) => (
                           <tr key={i} style={{ borderBottom: '1px solid #f1f1f4' }}>
                             <td style={{ padding: '12px 18px', fontWeight: '600' }}>{m.obj}</td>
@@ -1853,23 +1853,23 @@
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
                     <div className="card-enterprise" style={{ padding: '18px' }}>
                       <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>CURRENT SUPPLIER QUOTE</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#242424', marginTop: '6px' }} className="font-mono-numbers">$36,000.00</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#242424', marginTop: '6px' }} className="font-mono-numbers">₹36,000.00</div>
                       <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>Precision Components Ltd</div>
                     </div>
                     <div className="card-enterprise" style={{ padding: '18px' }}>
                       <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>HISTORICAL PO BENCHMARK</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#432177', marginTop: '6px' }} className="font-mono-numbers">$33,200.00</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#432177', marginTop: '6px' }} className="font-mono-numbers">₹33,200.00</div>
                       <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>Based on FY25 Q3 batch</div>
                     </div>
                     <div className="card-enterprise" style={{ padding: '18px' }}>
                       <div style={{ fontSize: '12px', color: '#73767b', fontWeight: '600' }}>REGIONAL MARKET MEDIAN</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#3676ce', marginTop: '6px' }} className="font-mono-numbers">$34,100.00</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#3676ce', marginTop: '6px' }} className="font-mono-numbers">₹34,100.00</div>
                       <div style={{ fontSize: '11.5px', color: '#73767b', marginTop: '4px' }}>US Central Industrial Index</div>
                     </div>
                     <div className="card-enterprise" style={{ padding: '18px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0' }}>
                       <div style={{ fontSize: '12px', color: '#166534', fontWeight: '700' }}>TARGET COUNTER-OFFER</div>
-                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f9d78', marginTop: '6px' }} className="font-mono-numbers">$33,500.00</div>
-                      <div style={{ fontSize: '11.5px', color: '#166534', fontWeight: '600', marginTop: '4px' }}>Projected Savings: $2,500 (6.9%)</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f9d78', marginTop: '6px' }} className="font-mono-numbers">₹33,500.00</div>
+                      <div style={{ fontSize: '11.5px', color: '#166534', fontWeight: '600', marginTop: '4px' }}>Projected Savings: ₹2,500 (6.9%)</div>
                     </div>
                   </div>
 
@@ -1909,7 +1909,7 @@
                           <strong>1. Multi-Year Volume Leverage:</strong> Highlight historical purchase volume across PR_00084 and pending Q1 datacenter demand to request an additional 4% unit discount.
                         </div>
                         <div style={{ padding: '10px 14px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px' }}>
-                          <strong>2. Competitive Distribution Baseline:</strong> Reference alternative tier-1 distributor quote offering $3,100.00 unit pricing with 48-hour delivery SLA.
+                          <strong>2. Competitive Distribution Baseline:</strong> Reference alternative tier-1 distributor quote offering ₹3,100.00 unit pricing with 48-hour delivery SLA.
                         </div>
                         <div style={{ padding: '10px 14px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px' }}>
                           <strong>3. Payment Term Concession:</strong> Propose accelerated Net 15 settlement terms in exchange for waiving the initial warranty surcharge.
@@ -2084,7 +2084,7 @@
                           <div><label style={{ color: '#73767b' }}>Settlement Financial Institution</label><input type="text" readOnly value="JPMorgan Chase Bank, N.A." style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
                           <div><label style={{ color: '#73767b' }}>SWIFT / BIC Code</label><input type="text" readOnly value="CHASUS33XXX" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
                           <div><label style={{ color: '#73767b' }}>Account Number</label><input type="text" readOnly value="••••••••9942" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
-                          <div><label style={{ color: '#73767b' }}>Settlement Currency</label><input type="text" readOnly value="USD" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
+                          <div><label style={{ color: '#73767b' }}>Settlement Currency</label><input type="text" readOnly value="INR" style={{ width: '100%', padding: '8px', border: '1px solid #e6e6e9', borderRadius: '4px' }} /></div>
                         </div>
                       </div>
                     )}
@@ -2130,24 +2130,24 @@
 
                     <div style={{ backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9', borderRadius: '8px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13.5px', marginBottom: '20px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#73767b' }}>Gross Total (10 units × $3,200.00):</span>
-                        <span className="font-mono-numbers">$32,000.00 USD</span>
+                        <span style={{ color: '#73767b' }}>Gross Total (10 units × ₹3,200.00):</span>
+                        <span className="font-mono-numbers">₹32,000.00 INR</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f9d78' }}>
-                        <span>Unit Discount (10 units × $200.00):</span>
-                        <span className="font-mono-numbers">−$2,000.00 USD</span>
+                        <span>Unit Discount (10 units × ₹200.00):</span>
+                        <span className="font-mono-numbers">−₹2,000.00 INR</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#73767b' }}>Taxable Base:</span>
-                        <span className="font-mono-numbers">$30,000.00 USD</span>
+                        <span className="font-mono-numbers">₹30,000.00 INR</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: '#73767b' }}>Standard Tax (20%):</span>
-                        <span className="font-mono-numbers">+$6,000.00 USD</span>
+                        <span className="font-mono-numbers">+₹6,000.00 INR</span>
                       </div>
                       <div style={{ borderTop: '2px solid #e6e6e9', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#432177' }}>
                         <span>Evaluated Net Quote:</span>
-                        <span className="font-mono-numbers">$36,000.00 USD</span>
+                        <span className="font-mono-numbers">₹36,000.00 INR</span>
                       </div>
                     </div>
                     <button onClick={() => alert("Quotation submitted with receipt hash REC-88FA92C1!")} style={{ padding: '9px 24px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer' }}>
@@ -2181,7 +2181,7 @@
                           <td style={{ padding: '12px 18px', fontWeight: '500' }}>SellMyGoods Corp US</td>
                           <td style={{ padding: '12px 18px', color: '#0f9d78', fontWeight: '600' }}>2026-11-20</td>
                           <td style={{ padding: '12px 18px' }}><StatusBadge status="Pending Receipt" /></td>
-                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$36,000.00 USD</td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹36,000.00 INR</td>
                           <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                             <button onClick={() => alert("PO_2026_0142 acknowledged. Production schedule confirmed.")} style={{ padding: '5px 12px', backgroundColor: '#0f9d78', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
                               Acknowledge PO
@@ -2231,7 +2231,7 @@
                           <td style={{ padding: '12px 18px' }}>
                             <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>✓ 3-Way Matched</span>
                           </td>
-                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$36,000.00 USD</td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹36,000.00 INR</td>
                           <td style={{ padding: '12px 18px' }}><StatusBadge status="Pending Approval" /></td>
                         </tr>
                       </tbody>
@@ -2265,7 +2265,7 @@
                           <td style={{ padding: '12px 18px', fontWeight: '600' }}>Enterprise Master IT Equipment & Maintenance Agreement</td>
                           <td style={{ padding: '12px 18px' }}>SellMyGoods Corp US</td>
                           <td style={{ padding: '12px 18px' }}>2026-01-01 to 2028-12-31</td>
-                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">$250,000.00 USD</td>
+                          <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">₹250,000.00 INR</td>
                           <td style={{ padding: '12px 18px' }}><StatusBadge status="Active" /></td>
                           <td style={{ padding: '12px 18px', textAlign: 'right' }}>
                             <button onClick={() => alert("Downloading executed PDF agreement...")} style={{ padding: '5px 12px', border: '1px solid #432177', color: '#432177', background: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>
@@ -2297,7 +2297,7 @@
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', backgroundColor: '#faf9fc', border: '1px solid #ededf2', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
                       <div>
                         <div style={{ fontSize: '12px', color: '#73767b' }}>CURRENT BEST BID</div>
-                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#432177', marginTop: '4px' }} className="font-mono-numbers">${buyerBestBid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#432177', marginTop: '4px' }} className="font-mono-numbers">₹{buyerBestBid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: '12px', color: '#73767b' }}>YOUR CURRENT RANK</div>
@@ -2321,7 +2321,7 @@
                         onClick={() => {
                           setBuyerBestBid(myNewBidInput);
                           setMyNewBidInput(myNewBidInput - 500);
-                          alert(`Competitive bid of $${myNewBidInput.toLocaleString()} submitted and registered on live auction ledger!`);
+                          alert(`Competitive bid of ₹${myNewBidInput.toLocaleString()} submitted and registered on live auction ledger!`);
                         }}
                         style={{ padding: '10px 24px', backgroundColor: '#432177', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}
                       >
@@ -2355,7 +2355,7 @@
 
                 <div style={{ padding: '24px', overflowY: 'auto' }}>
                   <div style={{ backgroundColor: '#f0e5ff', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', fontSize: '12.5px', color: '#432177' }}>
-                    💡 <strong>Section I1 Verified Financials:</strong> 10 units × $3,200 ($32k gross) − $2k discount + $6k tax = <strong>$36,000.00 Net</strong>
+                    💡 <strong>Section I1 Verified Financials:</strong> 10 units × ₹3,200 (₹32k gross) − ₹2k discount + ₹6k tax = <strong>₹36,000.00 Net</strong>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: `repeat(${comparisonData.suppliers.length}, 1fr)`, gap: '20px', marginBottom: '24px' }}>
@@ -2366,11 +2366,11 @@
                           {idx === 0 && <span style={{ backgroundColor: '#d1fae8', color: '#0f9d78', fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: '700' }}>Best Value</span>}
                         </div>
                         <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div>Gross: <span className="font-mono-numbers">${s.gross_amount?.toLocaleString()}</span></div>
-                          <div style={{ color: '#0f9d78' }}>Discount: <span className="font-mono-numbers">−${s.discount_amount?.toLocaleString()}</span></div>
-                          <div>Tax (20%): <span className="font-mono-numbers">+${s.tax_amount?.toLocaleString()}</span></div>
+                          <div>Gross: <span className="font-mono-numbers">₹{s.gross_amount?.toLocaleString()}</span></div>
+                          <div style={{ color: '#0f9d78' }}>Discount: <span className="font-mono-numbers">−₹{s.discount_amount?.toLocaleString()}</span></div>
+                          <div>Tax (20%): <span className="font-mono-numbers">+₹{s.tax_amount?.toLocaleString()}</span></div>
                           <div style={{ fontWeight: '700', fontSize: '16px', color: '#432177', borderTop: '1px solid #eee', paddingTop: '6px' }}>
-                            Net: <span className="font-mono-numbers">${s.net_quote?.toLocaleString()}</span>
+                            Net: <span className="font-mono-numbers">₹{s.net_quote?.toLocaleString()}</span>
                           </div>
                           <div>Technical Score: <strong>{s.technical_score}%</strong></div>
                           <div>Composite Total: <strong>{s.total_score} pts</strong></div>
@@ -2408,7 +2408,7 @@
               <div style={{ padding: '16px', fontSize: '13px' }}>
                 <div style={{ fontWeight: '600', marginBottom: '8px', color: '#432177' }}>Market Intelligence Benchmark</div>
                 <p style={{ margin: '0 0 10px 0', color: '#555', lineHeight: '1.5' }}>
-                  Precision Components Ltd quote of $36,000 for 10 switches is aligned within 3% of median enterprise contract baselines. Recommended counter-offer: $33,500 based on Q4 commitments.
+                  Precision Components Ltd quote of ₹36,000 for 10 switches is aligned within 3% of median enterprise contract baselines. Recommended counter-offer: ₹33,500 based on Q4 commitments.
                 </p>
                 <div style={{ padding: '8px 12px', backgroundColor: '#f0e5ff', borderRadius: '6px', color: '#432177', fontWeight: '600', fontSize: '12px' }}>
                   ✓ 5-Year Replacement Warranty Validated

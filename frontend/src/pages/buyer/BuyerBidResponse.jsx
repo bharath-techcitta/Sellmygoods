@@ -90,7 +90,7 @@ export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
           <div style={{ display: 'inline-block', backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9', borderRadius: '8px', padding: '16px 24px', textAlign: 'left', fontSize: '13px', marginBottom: '24px' }}>
             <div>Receipt Reference: <strong style={{ color: '#432177' }}>{submittedReceipt.receipt_id}</strong></div>
             <div style={{ marginTop: '4px' }}>Response Version: <strong>v{submittedReceipt.version} (Immutable)</strong></div>
-            <div style={{ marginTop: '4px' }}>Canonical Evaluated Net Quote: <strong style={{ color: '#0f9d78' }}>${submittedReceipt.calculated_financials?.net?.toLocaleString()} USD</strong></div>
+            <div style={{ marginTop: '4px' }}>Canonical Evaluated Net Quote: <strong style={{ color: '#0f9d78' }}>₹{submittedReceipt.calculated_financials?.net?.toLocaleString()} INR</strong></div>
           </div>
 
           <div>
@@ -190,7 +190,7 @@ export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Unit List Price ($ USD)</label>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Unit List Price (₹)</label>
                     <input
                       type="number"
                       value={unitPrice}
@@ -199,7 +199,7 @@ export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
                     />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Unit Discount ($ USD)</label>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>Unit Discount (₹)</label>
                     <input
                       type="number"
                       value={unitDiscount}
@@ -235,24 +235,24 @@ export default function BuyerBidResponse({ eventId = 1, onBack, navigateTo }) {
                 {/* Calculation Preview Box (Image 23 & Section I1 formula) */}
                 <div style={{ backgroundColor: '#fcfcfd', border: '1px solid #e6e6e9', borderRadius: '10px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13.5px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#73767b' }}>Gross Total (10 × $3,200.00):</span>
-                    <span className="font-mono-numbers">${gross.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+                    <span style={{ color: '#73767b' }}>Gross Total (10 × ₹3,200.00):</span>
+                    <span className="font-mono-numbers">₹{gross.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f9d78' }}>
-                    <span>Total Discount Deduction (10 × $200.00):</span>
-                    <span className="font-mono-numbers">−${discount.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+                    <span>Total Discount Deduction (10 × ₹200.00):</span>
+                    <span className="font-mono-numbers">−₹{discount.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#73767b' }}>Taxable Net Base:</span>
-                    <span className="font-mono-numbers">${taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+                    <span className="font-mono-numbers">₹{taxableBase.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#73767b' }}>Applicable Tax (20%):</span>
-                    <span className="font-mono-numbers">+${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+                    <span className="font-mono-numbers">+₹{tax.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</span>
                   </div>
                   <div style={{ borderTop: '2px solid #e6e6e9', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '17px', color: '#432177' }}>
                     <span>Final Evaluated Net Quotation:</span>
-                    <span className="font-mono-numbers">${net.toLocaleString(undefined, { minimumFractionDigits: 2 })} USD</span>
+                    <span className="font-mono-numbers">₹{net.toLocaleString(undefined, { minimumFractionDigits: 2 })} INR</span>
                   </div>
                 </div>
               </div>

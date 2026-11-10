@@ -14,7 +14,7 @@ const defaultSupplierEvents = [
     type: 'RFQ',
     delivery_location: 'Central Logistics Hub, Dallas TX',
     submission_deadline: '2026-11-06',
-    response_status: 'Quote Submitted ($36,000.00 Net)',
+    response_status: 'Quote Submitted (₹36,000.00 Net)',
     submitted_net: 36000.0
   }
 ];

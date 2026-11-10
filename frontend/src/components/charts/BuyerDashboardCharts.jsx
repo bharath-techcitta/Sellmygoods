@@ -36,9 +36,9 @@ export default function BuyerDashboardCharts({ events }) {
       </div>
       <div className="card-enterprise" style={{ padding: '18px' }}>
         <BarChart
-          title="Quoted value by event ($ thousands)"
+          title="Quoted value by event (₹ thousands)"
           items={valueBars.length ? valueBars : [{ label: 'No events', value: 0 }]}
-          valueFormatter={(v) => (v ? `$${v.toFixed(0)}k` : '—')}
+          valueFormatter={(v) => (v ? `₹${v.toFixed(0)}k` : '—')}
         />
       </div>
     </div>

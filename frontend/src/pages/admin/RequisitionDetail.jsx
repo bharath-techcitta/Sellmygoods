@@ -15,7 +15,7 @@ const defaultPrData = {
     buyer_name: 'Marcus Vance',
     department: 'Information Technology',
     business_entity: 'Procurio Corp US',
-    currency: 'USD',
+    currency: 'INR',
     total_amount: 32000.0,
     delivery_date: '2026-11-20',
     destination: 'Central Logistics Hub, Dallas TX',
@@ -108,7 +108,7 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
   };
 
   const handleCheckBudget = () => {
-    alert("Budget Ledger Verification: CC-1020-IT has $32,000.00 available headroom. Proposed PR reservation is within policy bounds.");
+    alert("Budget Ledger Verification: CC-1020-IT has ₹32,000.00 available headroom. Proposed PR reservation is within policy bounds.");
   };
 
   const handleSubmitPR = async () => {
@@ -170,7 +170,7 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
               <input type="number" min="1" value={createForm.quantity} onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
             </div>
             <div>
-              <label style={{ fontWeight: '600', fontSize: '13px' }}>Unit price (USD)</label>
+              <label style={{ fontWeight: '600', fontSize: '13px' }}>Unit price (INR)</label>
               <input type="number" min="0" step="0.01" value={createForm.unit_price} onChange={(e) => setCreateForm({ ...createForm, unit_price: e.target.value })} style={{ width: '100%', height: '38px', marginTop: '4px', padding: '0 10px', borderRadius: '6px', border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
             </div>
           </div>
@@ -343,11 +343,11 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
             </div>
             <div>
               <span style={{ color: '#73767b' }}>Fiscal Budget Allocated:</span>
-              <div style={{ fontWeight: '600' }} className="font-mono-numbers">${pr.budget_allocated?.toLocaleString()} USD</div>
+              <div style={{ fontWeight: '600' }} className="font-mono-numbers">₹{pr.budget_allocated?.toLocaleString()} INR</div>
             </div>
             <div>
               <span style={{ color: '#73767b' }}>Available Headroom:</span>
-              <div style={{ fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">${pr.budget_available?.toLocaleString()} USD</div>
+              <div style={{ fontWeight: '700', color: '#0f9d78' }} className="font-mono-numbers">₹{pr.budget_available?.toLocaleString()} INR</div>
             </div>
             <div style={{ gridColumn: 'span 2', marginTop: '4px' }}>
               <span style={{ backgroundColor: '#f0e5ff', color: '#432177', padding: '4px 8px', borderRadius: '4px', fontSize: '11.5px', fontWeight: '600' }}>
@@ -364,7 +364,7 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
           <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>Requested Line Items</h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={() => alert("AI Advisor: Historical purchase price for Cisco Catalyst 9300 in Q2 was $3,150. Current quote of $3,200 is acceptable.")}
+              onClick={() => alert("AI Advisor: Historical purchase price for Cisco Catalyst 9300 in Q2 was ₹3,150. Current quote of ₹3,200 is acceptable.")}
               style={{ padding: '6px 12px', border: '1px solid #d8b4fe', background: '#faf5ff', color: '#432177', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
             >
               ✨ AI Advisor
@@ -399,10 +399,10 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
                 <td style={{ padding: '12px 18px' }}>{line.quantity}</td>
                 <td style={{ padding: '12px 18px' }}>{line.uom}</td>
                 <td style={{ padding: '12px 18px', textAlign: 'right' }} className="font-mono-numbers">
-                  ${line.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₹{line.unit_price?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
                 <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                  ${line.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  ₹{line.amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
                 <td style={{ padding: '12px 18px' }}>
                   <StatusBadge status={line.status} />
@@ -416,7 +416,7 @@ export default function RequisitionDetail({ prId, onBack, navigateTo, onPoCreate
           <div style={{ fontSize: '15px' }}>
             <span>Total Requisition Value: </span>
             <strong style={{ fontSize: '18px', color: '#432177' }} className="font-mono-numbers">
-              ${pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {pr.currency}
+              ₹{pr.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {pr.currency}
             </strong>
           </div>
         </div>

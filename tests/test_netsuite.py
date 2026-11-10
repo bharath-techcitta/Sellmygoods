@@ -202,3 +202,26 @@ def test_forward_auction_with_item_lines_prices_per_line_highest_total_leads():
     assert bid("SUP_L2", 63000, 42000).status_code == 200          # total 1,050,000 leads
     c = client.get(f"/api/v1/auctions/{a['id']}/live-console", headers=hdr("SUP_L1")).json()
     assert c["session"]["your_current_rank"] == 2 and c["auction"]["current_best_bid"] == 1050000
+
+
+def test_rupee_normalisation_converts_stored_dollar_signs_and_usd():
+    from backend.database import SessionLocal
+    from backend.models import ApprovalTask, Requisition, User
+    from backend.seed import normalize_rupee_display
+    db = SessionLocal()
+    db.add(ApprovalTask(title="Approve PR ($15,500.00)", module="PR", record_code="PR_X", status="Pending", priority="High"))
+    db.add(Requisition(pr_number="PR_USD_TEST", description="Budget $32,000.00", currency="USD", total_amount=1.0))
+    u = db.query(User).first()
+    secret = "$2b$12$abcdefghijklmnopqrstuv"
+    if u is None:
+        u = User(email="t@example.com", full_name="T")
+        db.add(u)
+    db.commit()
+    touched = normalize_rupee_display(db)
+    assert touched["currency"] >= 1 and touched["text"] >= 2
+    t = db.query(ApprovalTask).filter(ApprovalTask.record_code == "PR_X").first()
+    r = db.query(Requisition).filter(Requisition.pr_number == "PR_USD_TEST").first()
+    assert t.title == "Approve PR (\u20b915,500.00)"
+    assert r.description == "Budget \u20b932,000.00" and r.currency == "INR"
+    assert normalize_rupee_display(db) == {"currency": 0, "text": 0, "json": 0}   # idempotent
+    db.close()

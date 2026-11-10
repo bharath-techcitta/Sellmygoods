@@ -15,15 +15,15 @@ NOW = datetime.datetime.utcnow()
 NEW_EVENTS = [
     dict(code="RFQ_2026_093", title="Industrial Lubricants & Hydraulic Fluids — Annual Supply", event_type="RFQ",
          status="Published", stage="Published", open_date=NOW - datetime.timedelta(days=2),
-         close_date=NOW + datetime.timedelta(days=5), currency="USD", budget=42000.0,
+         close_date=NOW + datetime.timedelta(days=5), currency="INR", budget=42000.0,
          department="Plant Operations", requester_name="Mike Alvarez", linked_pr_number="PR_00085"),
     dict(code="RFQ_2026_094", title="Ergonomic Office Furniture — Head Office Refit", event_type="RFQ",
          status="Commercial Review", stage="Commercial Review", open_date=NOW - datetime.timedelta(days=14),
-         close_date=NOW - datetime.timedelta(days=3), currency="USD", budget=26000.0,
+         close_date=NOW - datetime.timedelta(days=3), currency="INR", budget=26000.0,
          department="Facilities", requester_name="Priya Nair", linked_pr_number=None),
     dict(code="RFP_2026_016", title="Managed Cloud Hosting & Disaster Recovery Services", event_type="RFP",
          status="Technical Review", stage="Technical Review", open_date=NOW - datetime.timedelta(days=10),
-         close_date=NOW - datetime.timedelta(days=1), currency="USD", budget=95000.0,
+         close_date=NOW - datetime.timedelta(days=1), currency="INR", budget=95000.0,
          department="Information Technology", requester_name="Sarah Jenkins", linked_pr_number=None),
 ]
 

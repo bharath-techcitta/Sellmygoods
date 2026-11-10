@@ -13,13 +13,13 @@ function Row({ label, approved, pr, po, invoiced, available }) {
     <div style={{ marginBottom: '14px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
         <span style={{ fontWeight: 600, color: '#242424' }}>{label}</span>
-        <span style={{ color: '#73767b' }}>${approved?.toLocaleString()} approved</span>
+        <span style={{ color: '#73767b' }}>₹{approved?.toLocaleString()} approved</span>
       </div>
       <div style={{ display: 'flex', height: 14, borderRadius: 6, overflow: 'hidden', backgroundColor: '#f1f1f4' }}>
         {segs.map((s) => (
           <div
             key={s.key}
-            title={`${s.name}: $${s.v?.toLocaleString()}`}
+            title={`${s.name}: ₹${s.v?.toLocaleString()}`}
             style={{ width: `${Math.min(100, (s.v / total) * 100)}%`, backgroundColor: s.color, minWidth: s.v > 0 ? 2 : 0 }}
           />
         ))}

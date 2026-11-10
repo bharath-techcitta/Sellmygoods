@@ -12,7 +12,7 @@ const defaultBuyerInvoices = [
       invoice_date: '2026-11-03',
       due_date: '2026-12-03',
       total_amount: 36000.0,
-      currency: 'USD'
+      currency: 'INR'
     }
   }
 ];
@@ -70,7 +70,7 @@ export default function BuyerInvoices() {
                   <td style={{ padding: '12px 18px', color: '#555' }}>{inv.invoice_date}</td>
                   <td style={{ padding: '12px 18px', color: '#432177', fontWeight: '600' }}>{inv.due_date}</td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
+                    ₹{inv.total_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {inv.currency}
                   </td>
                 </tr>
               );

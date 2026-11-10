@@ -39,7 +39,7 @@ function StepDownChart({ points, currency }) {
     return { x, y, ...p };
   });
   const path = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x} ${c.y}`).join(' ');
-  const fmt = currency === 'INR' ? (v) => `₹${(v / 100000).toFixed(2)}L` : (v) => `$${v.toLocaleString()}`;
+  const fmt = currency === 'INR' ? (v) => `₹${(v / 100000).toFixed(2)}L` : (v) => `₹${v.toLocaleString()}`;
 
   return (
     <div>
@@ -104,7 +104,7 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
 
   const m = data.metrics || {};
   const cur = m.currency || 'INR';
-  const fmt = cur === 'INR' ? formatInr : (n) => `$${n?.toLocaleString()}`;
+  const fmt = cur === 'INR' ? formatInr : (n) => `₹${n?.toLocaleString()}`;
 
   return (
     <div style={{ paddingBottom: 32 }}>

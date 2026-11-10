@@ -3,8 +3,8 @@ import { api } from '../../api';
 import StatusBadge from '../../components/StatusBadge';
 
 const defaultPOs = [
-  { po: { id: 1, po_number: 'PO_2026_0142', status: 'Issued', receipt_status: 'Pending Receipt', invoice_status: 'Not Invoiced', payment_status: 'Unpaid', delivery_date: '2026-11-20', net_amount: 36000.0, currency: 'USD', department: 'Information Technology' }, supplier_name: 'Precision Components Ltd' },
-  { po: { id: 2, po_number: 'PO_2026_0143', status: 'Approved', receipt_status: 'Fully Received', invoice_status: 'Invoiced', payment_status: 'Paid', delivery_date: '2026-12-05', net_amount: 24500.0, currency: 'USD', department: 'Logistics' }, supplier_name: 'Apex Global Logistics Inc' },
+  { po: { id: 1, po_number: 'PO_2026_0142', status: 'Issued', receipt_status: 'Pending Receipt', invoice_status: 'Not Invoiced', payment_status: 'Unpaid', delivery_date: '2026-11-20', net_amount: 36000.0, currency: 'INR', department: 'Information Technology' }, supplier_name: 'Precision Components Ltd' },
+  { po: { id: 2, po_number: 'PO_2026_0143', status: 'Approved', receipt_status: 'Fully Received', invoice_status: 'Invoiced', payment_status: 'Paid', delivery_date: '2026-12-05', net_amount: 24500.0, currency: 'INR', department: 'Logistics' }, supplier_name: 'Apex Global Logistics Inc' },
 ];
 
 export default function PurchaseOrderList({ navigateTo, onSelectPO }) {
@@ -61,7 +61,7 @@ export default function PurchaseOrderList({ navigateTo, onSelectPO }) {
                   <td style={{ padding: '12px 18px' }}><StatusBadge status={p.receipt_status} /></td>
                   <td style={{ padding: '12px 18px', color: '#73767b' }}>{p.delivery_date}</td>
                   <td style={{ padding: '12px 18px', textAlign: 'right', fontWeight: '700' }} className="font-mono-numbers">
-                    ${p.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency || 'USD'}
+                    ₹{p.net_amount?.toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency || 'INR'}
                   </td>
                 </tr>
               );
