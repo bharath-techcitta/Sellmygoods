@@ -2096,18 +2096,28 @@ def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depend
     fwd = _is_forward(auc)
     opening = float(auc.reserve_price or 0)
 
-    # A supplier may re-bid any time, as long as each bid improves on their OWN previous bid.
-    # They do not have to beat the current leader in one step - that is how rank climbs.
-    if last_receipt:
+    if fwd:
+        # FORWARD (scrap sale, highest bid wins): every bid - from ANY buyer - must be higher than the
+        # current highest bid by at least the minimum raise. The first bid must beat the starting price.
+        top = float(auc.current_best_bid or 0)
+        has_bids = top > opening or db.query(AuctionBidReceipt).filter(AuctionBidReceipt.auction_id == id).count() > 0
+        if has_bids:
+            need = top + min_improve
+            if evaluated_total < need:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Your bid must be higher than the current highest bid ({cur} {top:,.2f}). Minimum bid: {cur} {need:,.2f}.",
+                )
+        elif evaluated_total <= opening:
+            raise HTTPException(status_code=400, detail=f"Opening bid must be higher than the starting price {cur} {opening:,.2f}.")
+    elif last_receipt:
+        # REVERSE (procurement, lowest bid wins): a supplier may re-bid any time as long as each bid improves on
+        # their OWN previous bid; they do not have to beat the current leader in one step - that is how rank climbs.
         own = float(last_receipt.evaluated_total)
-        if fwd and evaluated_total < own + min_improve:
-            raise HTTPException(status_code=400, detail=f"Raise your own bid by at least {cur} {min_improve:,.0f} (your last bid: {cur} {own:,.2f}).")
-        if not fwd and evaluated_total > own - min_improve:
+        if evaluated_total > own - min_improve:
             raise HTTPException(status_code=400, detail=f"Lower your own bid by at least {cur} {min_improve:,.0f} (your last bid: {cur} {own:,.2f}).")
     else:
-        if fwd and evaluated_total <= opening:
-            raise HTTPException(status_code=400, detail=f"Opening bid must be higher than the starting price {cur} {opening:,.2f}.")
-        if not fwd and opening and evaluated_total >= opening:
+        if opening and evaluated_total >= opening:
             raise HTTPException(status_code=400, detail=f"Opening bid must be lower than the starting price {cur} {opening:,.2f}.")
 
     current_best = float(auc.current_best_bid or 0)

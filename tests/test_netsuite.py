@@ -133,3 +133,35 @@ def test_supplier_bell_notified_when_buyer_starts_auction():
     assert client.post(f"/api/v1/notifications/{s1[0]['db_id']}/read", headers=h).status_code == 200
     d2, s2 = bell(ids["SUP_T1"])
     assert s2[0]["unread"] is False and d2["unread_count"] == d1["unread_count"] - 1
+
+
+def test_forward_auction_every_bid_must_beat_the_current_highest():
+    from backend.database import SessionLocal
+    from backend.models import Supplier
+    db = SessionLocal()
+    for code in ("SUP_F1", "SUP_F2"):
+        if not db.query(Supplier).filter(Supplier.code == code).first():
+            db.add(Supplier(code=code, legal_name=code, trading_name=code, status="Active"))
+    db.commit()
+    ids = {s.code: s.id for s in db.query(Supplier).all()}
+    db.close()
+    admin = {"X-Demo-Role": "procurement_buyer", "X-Demo-Portal": "admin"}
+    a = client.post("/api/v1/auctions", headers=admin, json={
+        "title": "Scrap highest wins", "auction_type": "Forward Disposal", "status": "Live",
+        "reserve_price": 100000, "min_decrement": 5000, "min_bid_improvement": 5000}).json()
+
+    def bid(code, amount):
+        h = {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(ids[code])}
+        return client.post(f"/api/v1/auctions/{a['id']}/bid", headers=h, json={"bid_amount": amount})
+
+    assert bid("SUP_F1", 100000).status_code == 400          # first bid must beat the starting price
+    assert bid("SUP_F1", 105000).status_code == 200
+    for low in (103000, 105000, 108000):                      # another buyer must beat the highest by the min raise
+        r = bid("SUP_F2", low)
+        assert r.status_code == 400 and "current highest bid" in r.json()["detail"]
+    assert bid("SUP_F2", 110000).status_code == 200
+    assert bid("SUP_F1", 112000).status_code == 400           # even the previous leader needs highest + raise
+    assert bid("SUP_F1", 115000).status_code == 200
+    h = {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(ids["SUP_F2"])}
+    c = client.get(f"/api/v1/auctions/{a['id']}/live-console", headers=h).json()
+    assert c["session"]["your_current_rank"] == 2 and c["auction"]["current_best_bid"] == 115000

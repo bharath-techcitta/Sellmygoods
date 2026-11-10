@@ -86,8 +86,11 @@ export default function LiveForwardAuctionConsole({ auctionId, onBack }) {
   const step = auction.min_bid_improvement || auction.min_decrement || 500;
   const biddingAllowed = consoleData.bidding_allowed === true && auction.status === 'Live';
   const myBest = session.your_best_total;
-  // Smallest legal next bid: above own last bid, or above the starting price for a first bid.
-  const minNext = myBest != null ? myBest + step : (auction.reserve_price || 0) + step;
+  // Smallest legal next bid: higher than the CURRENT HIGHEST bid (anyone's) by the minimum raise;
+  // the very first bid only has to beat the starting price.
+  const topBid = Number(session.leader_total ?? auction.current_best_bid ?? 0);
+  const hasBids = topBid > Number(auction.reserve_price || 0) || (session.total_bidders || 0) > 0;
+  const minNext = hasBids ? topBid + step : (auction.reserve_price || 0) + step;
   const rank = session.your_current_rank;
   const amount = parseFloat(bidAmount === '' ? String(minNext) : bidAmount);
   const validNumber = !Number.isNaN(amount);
@@ -119,7 +122,7 @@ export default function LiveForwardAuctionConsole({ auctionId, onBack }) {
     submit(amount);
   };
 
-  const quick = [...new Set([minNext, session.bid_to_gain_one_rank, session.bid_to_take_lead].filter((v) => v != null))].sort((a, b) => a - b);
+  const quick = [minNext, minNext + step, minNext + 2 * step];
 
   return (
     <div style={{ paddingBottom: 24 }}>
@@ -170,7 +173,7 @@ export default function LiveForwardAuctionConsole({ auctionId, onBack }) {
       <div className="card-enterprise" style={{ padding: 22, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700 }}>{myBest != null ? 'Raise your bid to climb the ranks' : 'Place your bid'}</h3>
         <p style={{ margin: '0 0 14px', fontSize: 12, color: '#73767b' }}>
-          Minimum next bid <strong>{fmtMoney(minNext, cur)}</strong> (your own bid + {fmtMoney(step, cur)}). Every re-bid must beat your previous one.
+          Minimum next bid <strong>{fmtMoney(minNext, cur)}</strong> ({hasBids ? `current highest bid ${fmtMoney(topBid, cur)} + ${fmtMoney(step, cur)}` : `starting price + ${fmtMoney(step, cur)}`}). Every new bid must be higher than the current highest bid, and the highest bid leads.
         </p>
         {biddingAllowed ? (
           <>
