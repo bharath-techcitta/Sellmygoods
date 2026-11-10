@@ -71,16 +71,58 @@ active_session = {
 }
 
 
+_identity_cache: dict = {}
+
+
+def _supplier_identity(supplier_id: int) -> dict:
+    """Name/company of the supplier user for a demo login (primary contact of an ACTIVE supplier). Cached 60s."""
+    import time
+    hit = _identity_cache.get(supplier_id)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    ident = None
+    try:
+        from .database import SessionLocal
+        db = SessionLocal()
+        try:
+            sup = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+            if sup:
+                con = (db.query(SupplierContact).filter(SupplierContact.supplier_id == supplier_id)
+                       .order_by(SupplierContact.is_primary.desc(), SupplierContact.id).first())
+                person = (con.name if con else None) or (sup.trading_name or sup.legal_name)
+                ident = {
+                    "full_name": person,
+                    "email": (con.email if con and con.email else sup.email) or "",
+                    "company": sup.trading_name or sup.legal_name,
+                }
+        finally:
+            db.close()
+    except Exception:
+        ident = None
+    if ident is None:
+        ident = {"full_name": "Elena Rostova", "email": "elena.rostova@precisioncomponents.com", "company": "Precision Components"}
+    _identity_cache[supplier_id] = (time.time(), ident)
+    return ident
+
+
+def _initials(name: str) -> str:
+    parts = [p for p in (name or "").split() if p]
+    return ("".join(p[0] for p in parts[:2]) or "SU").upper()
+
+
 def build_demo_session(role: str, portal: str, supplier_id: Optional[int] = None) -> dict:
     if role == "supplier_user":
+        sid = supplier_id or 1
+        ident = _supplier_identity(sid)
         return {
-            "user_id": 2,
-            "email": "elena.rostova@precisioncomponents.com",
-            "full_name": "Elena Rostova",
+            "user_id": 100 + sid,
+            "email": ident["email"],
+            "full_name": ident["full_name"],
+            "company": ident["company"],
             "role": "supplier_user",
             "portal": "buyer",
-            "supplier_id": supplier_id or 1,
-            "avatar_initials": "ER",
+            "supplier_id": sid,
+            "avatar_initials": _initials(ident["full_name"]),
         }
     return {
         "user_id": 1,
@@ -161,6 +203,28 @@ def on_startup():
 
 # ----------------- AUTH & SESSION -----------------
 
+def _available_roles() -> list:
+    roles = [{"role": "procurement_buyer", "portal": "admin", "supplier_id": None, "name": "Marcus Vance (Procurement Buyer)",
+              "person": "Marcus Vance", "company": "Procurement Buyer", "initials": "MV"}]
+    try:
+        from .database import SessionLocal
+        db = SessionLocal()
+        try:
+            for sup in db.query(Supplier).filter(Supplier.status == "Active").order_by(Supplier.id).all():
+                ident = _supplier_identity(sup.id)
+                roles.append({
+                    "role": "supplier_user", "portal": "buyer", "supplier_id": sup.id,
+                    "name": f"{ident['full_name']} ({ident['company']} - Supplier)",
+                    "person": ident["full_name"], "company": ident["company"], "initials": _initials(ident["full_name"]),
+                })
+        finally:
+            db.close()
+    except Exception:
+        roles.append({"role": "supplier_user", "portal": "buyer", "supplier_id": 1, "name": "Elena Rostova (Precision Components - Supplier)",
+                      "person": "Elena Rostova", "company": "Precision Components", "initials": "ER"})
+    return roles
+
+
 @app.get("/api/v1/auth/me")
 def get_current_user():
     user = get_demo_session()
@@ -170,10 +234,7 @@ def get_current_user():
             {"id": "admin", "title": "Admin Portal", "context": "Internal Procurement Workspace"},
             {"id": "buyer", "title": "Buyer Portal", "context": "Supplier Workspace"}
         ],
-        "available_roles": [
-            {"role": "procurement_buyer", "portal": "admin", "name": "Marcus Vance (Procurement Buyer)"},
-            {"role": "supplier_user", "portal": "buyer", "name": "Elena Rostova (Precision Components)"},
-        ]
+        "available_roles": _available_roles()
     }
 
 class RoleSwitchRequest(BaseModel):

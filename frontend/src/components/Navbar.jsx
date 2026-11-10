@@ -24,6 +24,7 @@ function priorityColor(priority) {
 export default function Navbar({
   activePortal,
   currentRole,
+  currentSupplierId = 1,
   onSwitchRole,
   toggleSidebar,
   onNavigate,
@@ -35,10 +36,20 @@ export default function Navbar({
   );
   const [unreadCount, setUnreadCount] = useState(notifications.length);
 
-  const roles = [
-    { role: 'procurement_buyer', portal: 'admin', label: 'Marcus Vance (Procurement Buyer)' },
-    { role: 'supplier_user', portal: 'buyer', label: 'Elena Rostova (Precision Components - Supplier)' },
-  ];
+  // Logins come from the backend: the procurement buyer + one login per ACTIVE supplier.
+  const [roles, setRoles] = useState([
+    { role: 'procurement_buyer', portal: 'admin', supplier_id: null, label: 'Marcus Vance (Procurement Buyer)', person: 'Marcus Vance', company: 'Procurement Buyer', initials: 'MV' },
+    { role: 'supplier_user', portal: 'buyer', supplier_id: 1, label: 'Elena Rostova (Precision Components - Supplier)', person: 'Elena Rostova', company: 'Precision Components', initials: 'ER' },
+  ]);
+  useEffect(() => {
+    api.getMe().then((res) => {
+      if (res?.available_roles?.length) {
+        setRoles(res.available_roles.map((r) => ({ ...r, label: r.name })));
+      }
+    }).catch(() => {});
+  }, []);
+  const isSameLogin = (r) => r.role === currentRole && (r.role !== 'supplier_user' || Number(r.supplier_id) === Number(currentSupplierId));
+  const me = roles.find(isSameLogin) || roles.find((r) => r.role === currentRole) || roles[0];
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -315,14 +326,14 @@ export default function Navbar({
                 fontSize: '13px',
               }}
             >
-              {currentRole === 'supplier_user' ? 'ER' : 'MV'}
+              {me.initials}
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: '13px', fontWeight: '600', color: '#242424' }}>
-                {currentRole === 'supplier_user' ? 'Elena Rostova' : 'Marcus Vance'}
+                {me.person}
               </div>
               <div style={{ fontSize: '11px', color: '#73767b' }}>
-                {currentRole === 'supplier_user' ? 'Precision Components' : 'Procurement Buyer'}
+                {me.company}
               </div>
             </div>
             <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,17 +361,17 @@ export default function Navbar({
               </div>
               {roles.map((r, idx) => (
                 <div
-                  key={idx}
+                  key={`${r.role}-${r.supplier_id ?? 'x'}-${idx}`}
                   onClick={() => {
-                    onSwitchRole(r.role, r.portal);
+                    onSwitchRole(r.role, r.portal, r.supplier_id);
                     setShowProfileMenu(false);
                   }}
                   style={{
                     padding: '8px 16px',
                     fontSize: '13px',
-                    color: currentRole === r.role ? '#432177' : '#242424',
-                    fontWeight: currentRole === r.role ? '600' : '400',
-                    backgroundColor: currentRole === r.role ? '#f5f0ff' : 'transparent',
+                    color: isSameLogin(r) ? '#432177' : '#242424',
+                    fontWeight: isSameLogin(r) ? '600' : '400',
+                    backgroundColor: isSameLogin(r) ? '#f5f0ff' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -368,7 +379,7 @@ export default function Navbar({
                   }}
                 >
                   <span>{r.label}</span>
-                  {currentRole === r.role && <span style={{ color: '#0f9d78', fontSize: '14px' }}>✓</span>}
+                  {isSameLogin(r) && <span style={{ color: '#0f9d78', fontSize: '14px' }}>✓</span>}
                 </div>
               ))}
             </div>

@@ -454,6 +454,8 @@ def ensure_auction_dummy_data(db) -> None:
         scrap.total_bids_placed = max(int(scrap.total_bids_placed or 0), 3)
         db.commit()
 
+    from .seed_suppliers import ensure_demo_suppliers
+    ensure_demo_suppliers(db)
     ensure_live_auctions_ready(db)
 
 

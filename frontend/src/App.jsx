@@ -54,6 +54,7 @@ const BUYER_ROUTES = new Set([
 export default function App() {
   const [activePortal, setActivePortal] = useState('admin'); // 'admin' or 'buyer'
   const [currentRole, setCurrentRole] = useState('procurement_buyer');
+  const [currentSupplierId, setCurrentSupplierId] = useState(1);
   const [currentRoute, setCurrentRoute] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -68,6 +69,7 @@ export default function App() {
     const saved = readDemoSession();
     setActivePortal(saved.portal);
     setCurrentRole(saved.role);
+    setCurrentSupplierId(saved.supplier_id ?? 1);
     setCurrentRoute(saved.portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
 
     // Optional health check — do NOT overwrite role/portal from server (avoids reset on deploy).
@@ -76,13 +78,15 @@ export default function App() {
     });
   }, []);
 
-  const handleSwitchRole = async (role, portal) => {
-    writeDemoSession({ role, portal, supplier_id: 1 });
+  const handleSwitchRole = async (role, portal, supplierId = 1) => {
+    const sid = supplierId || 1;
+    writeDemoSession({ role, portal, supplier_id: sid });
     setActivePortal(portal);
     setCurrentRole(role);
+    setCurrentSupplierId(sid);
     setCurrentRoute(portal === 'admin' ? 'dashboard' : 'buyer-dashboard');
     try {
-      await api.switchRole(role, portal, 1);
+      await api.switchRole(role, portal, sid);
     } catch (e) {
       console.error(e);
     }
@@ -109,13 +113,14 @@ export default function App() {
         <Navbar
           activePortal={activePortal}
           currentRole={currentRole}
+          currentSupplierId={currentSupplierId}
           onSwitchRole={handleSwitchRole}
           onNavigate={navigateTo}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
 
         {/* Content Page (18-24px padding) */}
-        <main style={{ flex: 1, padding: '24px', maxWidth: '1600px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <main key={`${currentRole}-${currentSupplierId}`} style={{ flex: 1, padding: '24px', maxWidth: '1600px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {/* Admin Routes */}
           {activePortal === 'admin' && (
             <>
