@@ -265,7 +265,7 @@ def health_db(db: Session = Depends(get_db)):
 
     backend = "sqlite" if DATABASE_URL.startswith("sqlite") else "postgresql"
     try:
-        live_auctions = db.query(Auction).filter(Auction.status == "Live").count()
+        live_auctions = db.query(Auction).filter(Auction.status == "Live", Auction.auction_type == "Forward Disposal").count()
         sample = (
             db.query(Auction.auction_number, Auction.status, Auction.title)
             .order_by(Auction.id.desc())
@@ -316,7 +316,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
     approved_prs = db.query(Requisition).filter(Requisition.status == "Approved").count()
     total_pos = db.query(PurchaseOrder).count()
     open_rfqs = db.query(SourcingEvent).count()
-    live_auctions = db.query(Auction).filter(Auction.status == "Live").count()
+    live_auctions = db.query(Auction).filter(Auction.status == "Live", Auction.auction_type == "Forward Disposal").count()
     
     return {
         "top_metrics": {
@@ -471,7 +471,7 @@ def get_notifications(db: Session = Depends(get_db)):
                     "module": "Bid",
                 })
 
-        live_auctions = db.query(Auction).filter(Auction.status == "Live").count()
+        live_auctions = db.query(Auction).filter(Auction.status == "Live", Auction.auction_type == "Forward Disposal").count()
         if live_auctions:
             items.append({
                 "id": "auction-live",
@@ -898,6 +898,7 @@ class CreateAuctionFromPRRequest(BaseModel):
 
 @app.post("/api/v1/purchase-requests/{id}/create-auction")
 def create_auction_from_pr(id: int, req: CreateAuctionFromPRRequest, db: Session = Depends(get_db)):
+    raise HTTPException(status_code=400, detail="Reverse (procurement) auctions are no longer available. Only Forward Disposal (scrap sale) auctions can be created.")
     pr = db.query(Requisition).filter(Requisition.id == id).first()
     if not pr:
         raise HTTPException(status_code=404, detail="Requisition not found")
@@ -1899,7 +1900,7 @@ def get_auction_analytics(id: int, view: str = "buyer", db: Session = Depends(ge
 
 @app.get("/api/v1/auctions")
 def get_auctions(db: Session = Depends(get_db)):
-    aucs = db.query(Auction).all()
+    aucs = db.query(Auction).filter(Auction.auction_type == "Forward Disposal").all()
     for a in aucs:
         _close_if_expired(db, a)
     status_order = {"Live": 0, "Scheduled": 1, "Award Under Process": 2, "Closed": 3}
@@ -1917,7 +1918,7 @@ class CreateAuctionLineRequest(BaseModel):
 
 class CreateAuctionRequest(BaseModel):
     title: str
-    auction_type: str = "Reverse Sourcing"
+    auction_type: str = "Forward Disposal"
     status: str = "Live"
     pr_number: Optional[str] = None
     current_approver: Optional[str] = "Marcus Vance"
@@ -1933,8 +1934,8 @@ class CreateAuctionRequest(BaseModel):
 
 @app.post("/api/v1/auctions")
 def create_auction(req: CreateAuctionRequest, db: Session = Depends(get_db)):
-    if req.auction_type not in ("Reverse Sourcing", "Forward Disposal"):
-        raise HTTPException(status_code=400, detail="auction_type must be Reverse Sourcing or Forward Disposal")
+    if req.auction_type != "Forward Disposal":
+        raise HTTPException(status_code=400, detail="Only Forward Disposal (scrap sale) auctions are available.")
     status = req.status if req.status in ("Scheduled", "Live") else "Live"
     now = datetime.datetime.utcnow()
     start = now if status == "Live" else now + datetime.timedelta(minutes=5)
@@ -1959,8 +1960,6 @@ def create_auction(req: CreateAuctionRequest, db: Session = Depends(get_db)):
                 )
             )
 
-    if req.auction_type == "Reverse Sourcing" and not line_items:
-        raise HTTPException(status_code=400, detail="Reverse auctions require at least one line item.")
 
     reserve = float(req.reserve_price) if req.reserve_price is not None else None
     if reserve is None:

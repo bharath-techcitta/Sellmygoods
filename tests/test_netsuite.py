@@ -69,22 +69,24 @@ def test_unknown_status_ineligible(monkeypatch):
     pid = [p for p in client.get("/api/v1/requisitions").json()["items"] if p["netsuite_internal_id"] == "103"][0]["id"]
     e = client.get(f"/api/v1/purchase-requests/{pid}/auction-eligibility").json()
     assert e["eligible"] is False
-    assert client.post(f"/api/v1/purchase-requests/{pid}/create-auction", json={}).status_code == 409
+    assert client.post(f"/api/v1/purchase-requests/{pid}/create-auction", json={}).status_code == 400
 
 
-def test_create_auction_from_approved_pr_and_block_duplicate(monkeypatch):
+def test_reverse_auctions_are_no_longer_available(monkeypatch):
+    # PR -> (reverse) auction is closed; eligibility info is still readable
     sync(monkeypatch, [rec(ns_id="104", tranid="PR-1004", status="B")])
     pid = [p for p in client.get("/api/v1/requisitions").json()["items"] if p["netsuite_internal_id"] == "104"][0]["id"]
     assert client.get(f"/api/v1/purchase-requests/{pid}/auction-eligibility").json()["eligible"] is True
-    r = client.post(f"/api/v1/purchase-requests/{pid}/create-auction", json={"duration_hours": 1})
-    assert r.status_code == 200, r.text
-    a = r.json()
-    assert a["pr_number"] == "PR-1004" and a["reserve_price"] == 500000 and a["currency"] == "INR"
-    assert a["requisition_id"] == pid and a["status"] == "Scheduled"
-    lines = client.get(f"/api/v1/auctions/{a['id']}/live-console").json()["lines"]
-    assert lines[0]["quantity"] == 1000 and lines[0]["last_rate"] == 500
-    r2 = client.post(f"/api/v1/purchase-requests/{pid}/create-auction", json={})
-    assert r2.status_code == 409 and "already exists" in r2.json()["detail"]["reasons"][0]
+    r = client.post(f"/api/v1/purchase-requests/{pid}/create-auction", json={})
+    assert r.status_code == 400 and "Forward Disposal" in r.json()["detail"]
+    # creating a reverse auction directly is refused too
+    admin = {"X-Demo-Role": "procurement_buyer", "X-Demo-Portal": "admin"}
+    r = client.post("/api/v1/auctions", headers=admin, json={"title": "x", "auction_type": "Reverse Sourcing", "reserve_price": 1})
+    assert r.status_code == 400
+    # forward disposal is the default and the only type; the list shows nothing else
+    ok = client.post("/api/v1/auctions", headers=admin, json={"title": "Scrap", "reserve_price": 1000, "status": "Scheduled"})
+    assert ok.status_code == 200 and ok.json()["auction_type"] == "Forward Disposal"
+    assert {x["auction_type"] for x in client.get("/api/v1/auctions").json()} == {"Forward Disposal"}
 
 
 def test_oauth_signature_is_deterministic(monkeypatch):
@@ -110,7 +112,7 @@ def test_supplier_bell_notified_when_buyer_starts_auction():
     db.close()
     buyer = {"X-Demo-Role": "procurement_buyer", "X-Demo-Portal": "admin"}
     a = client.post("/api/v1/auctions", headers=buyer, json={
-        "title": "Notify me", "auction_type": "Reverse Sourcing", "status": "Scheduled", "reserve_price": 100000,
+        "title": "Notify me", "auction_type": "Forward Disposal", "status": "Scheduled", "reserve_price": 100000,
         "min_decrement": 1000, "tax_rate_pct": 0, "freight_fixed": 0,
         "lines": [{"line_code": "A", "description": "x", "quantity": 1, "uom": "MT", "last_rate": 90000}]}).json()
 

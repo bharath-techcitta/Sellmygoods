@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import { api } from '../../api';
 
-const defaultReverseLines = [
-  { line_code: 'LN-01', description: 'Primary lot / material scope', quantity: 10, uom: 'Unit', last_rate: 1000 },
-  { line_code: 'LN-02', description: 'Secondary line / accessories', quantity: 5, uom: 'Unit', last_rate: 800 },
+const defaultScrapLines = [
+  { line_code: 'SC-01', description: 'MS Heavy Melting Scrap', quantity: 100, uom: 'MT', last_rate: 36000 },
+  { line_code: 'SC-02', description: 'GI Sheeting Scrap', quantity: 40, uom: 'MT', last_rate: 31000 },
+  { line_code: 'SC-03', description: 'MS Boring Scrap', quantity: 60, uom: 'MT', last_rate: 27000 },
 ];
 
 export default function AuctionCreatePanel({ onCreated, onCancel }) {
   const [title, setTitle] = useState('');
-  const [auctionType, setAuctionType] = useState('Reverse Sourcing');
+  const auctionType = 'Forward Disposal';   // the only auction type
   const [status, setStatus] = useState('Live');
   const [prNumber, setPrNumber] = useState('');
   const [currency, setCurrency] = useState('INR');
-  const [freightFixed, setFreightFixed] = useState(0);
-  const [taxRate, setTaxRate] = useState(18);
-  const [minImprovement, setMinImprovement] = useState(2500);
+  const [minImprovement, setMinImprovement] = useState(10000);
   const [reservePrice, setReservePrice] = useState('');
   const [durationHours, setDurationHours] = useState(2);
-  const [lines, setLines] = useState(defaultReverseLines);
+  const [lines, setLines] = useState(defaultScrapLines);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -40,20 +39,17 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
         status,
         pr_number: prNumber.trim() || undefined,
         currency,
-        freight_fixed: Number(freightFixed) || 0,
-        tax_rate_pct: Number(taxRate) || 18,
-        min_bid_improvement: Number(minImprovement) || 2500,
-        min_decrement: auctionType === 'Forward Disposal' ? Number(minImprovement) || 500 : undefined,
+        freight_fixed: 0,
+        tax_rate_pct: 0,
+        min_bid_improvement: Number(minImprovement) || 10000,
+        min_decrement: Number(minImprovement) || 10000,
         duration_hours: Number(durationHours) || 2,
         reserve_price: reservePrice === '' ? undefined : Number(reservePrice),
-        lines:
-          auctionType === 'Reverse Sourcing'
-            ? lines.map((ln) => ({
-                ...ln,
-                quantity: Number(ln.quantity),
-                last_rate: Number(ln.last_rate),
-              }))
-            : undefined,
+        lines: lines.map((ln) => ({
+          ...ln,
+          quantity: Number(ln.quantity),
+          last_rate: Number(ln.last_rate),
+        })),
       };
       const created = await api.createAuction(payload);
       onCreated?.(created);
@@ -83,8 +79,7 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>
             Type
-            <select value={auctionType} onChange={(e) => setAuctionType(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, borderRadius: 6, border: '1px solid #e6e6e9' }}>
-              <option value="Reverse Sourcing">Reverse Sourcing</option>
+            <select value={auctionType} disabled style={{ width: '100%', height: 38, marginTop: 4, borderRadius: 6, border: '1px solid #e6e6e9' }}>
               <option value="Forward Disposal">Forward Disposal</option>
             </select>
           </label>
@@ -111,30 +106,18 @@ export default function AuctionCreatePanel({ onCreated, onCancel }) {
             <input type="number" min="0.5" step="0.5" value={durationHours} onChange={(e) => setDurationHours(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>
-            Opening baseline / reserve (optional)
-            <input type="number" value={reservePrice} onChange={(e) => setReservePrice(e.target.value)} placeholder="Auto from lines" style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
+            Starting price (optional)
+            <input type="number" value={reservePrice} onChange={(e) => setReservePrice(e.target.value)} placeholder="Auto from items" style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
           <label style={{ display: 'block', fontSize: 13 }}>
-            Min improvement / increment
+            Minimum raise per bid
             <input type="number" value={minImprovement} onChange={(e) => setMinImprovement(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
           </label>
-          {auctionType === 'Reverse Sourcing' && (
-            <>
-              <label style={{ display: 'block', fontSize: 13 }}>
-                Fixed freight
-                <input type="number" value={freightFixed} onChange={(e) => setFreightFixed(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
-              </label>
-              <label style={{ display: 'block', fontSize: 13 }}>
-                Tax rate (%)
-                <input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} style={{ width: '100%', height: 38, marginTop: 4, padding: '0 10px', borderRadius: 6, border: '1px solid #e6e6e9', boxSizing: 'border-box' }} />
-              </label>
-            </>
-          )}
         </div>
 
-        {auctionType === 'Reverse Sourcing' && (
+        {(
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Line items (opening rates)</div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>Scrap items (starting rate per MT)</div>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead style={{ background: '#fcfcfd', color: '#73767b' }}>
                 <tr>

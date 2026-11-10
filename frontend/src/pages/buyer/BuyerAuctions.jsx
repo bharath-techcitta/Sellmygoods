@@ -46,7 +46,7 @@ export default function BuyerAuctions({ navigateTo, onSelectAuction }) {
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Live Supplier Auction Terminal</h1>
         <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#73767b' }}>
-          Bid on <strong>Live</strong> lots only — reverse (line rates) and forward disposal (single amount)
+          Bid on <strong>Live</strong> lots only — the highest bid wins
         </p>
       </div>
 
