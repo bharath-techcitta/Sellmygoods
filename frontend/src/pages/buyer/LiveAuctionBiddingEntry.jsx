@@ -5,11 +5,13 @@ import LiveForwardAuctionConsole from './LiveForwardAuctionConsole';
 
 export default function LiveAuctionBiddingEntry({ auctionId, onBack }) {
   const [auctionType, setAuctionType] = useState(null);
+  const [hasLines, setHasLines] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
     setAuctionType(null);
+    setHasLines(false);
     setError('');
     (async () => {
       try {
@@ -17,6 +19,7 @@ export default function LiveAuctionBiddingEntry({ auctionId, onBack }) {
         if (cancelled) return;
         const type = consoleRes?.auction?.auction_type;
         if (type) {
+          setHasLines((consoleRes?.lines || []).length > 0);
           setAuctionType(type);
           return;
         }
@@ -52,7 +55,9 @@ export default function LiveAuctionBiddingEntry({ auctionId, onBack }) {
     return <div style={{ padding: 24 }}>Loading auction…</div>;
   }
 
-  if (auctionType === 'Forward Disposal') {
+  // Scrap sales with item lines use the same price-per-line screen as procurement lots (highest price leads);
+  // single-amount disposal lots without lines keep the simple amount screen.
+  if (auctionType === 'Forward Disposal' && !hasLines) {
     return <LiveForwardAuctionConsole auctionId={auctionId} onBack={onBack} />;
   }
 

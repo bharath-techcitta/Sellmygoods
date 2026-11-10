@@ -111,7 +111,14 @@ def seed_demo_procurement() -> dict:
         # ---- Forward auctions: scrap disposal ----------------------------------------------
         for n, (sku, name, desc, price, qty, step, loc) in enumerate(SCRAP_ITEMS, start=2):
             title = f"{name} — {qty} MT disposal · {loc}"
-            if db.query(Auction).filter(Auction.title == title).first():
+            existing = db.query(Auction).filter(Auction.title == title).first()
+            if existing:
+                # make older rows match: the sale value has no GST/freight, and the lot carries its item line
+                existing.tax_rate_pct = 0.0
+                existing.freight_fixed = 0.0
+                if db.query(AuctionLineItem).filter(AuctionLineItem.auction_id == existing.id).count() == 0:
+                    db.add(AuctionLineItem(auction_id=existing.id, line_code=f"SC-{n - 1:02d}", description=desc,
+                                           quantity=float(qty), uom="MT", last_rate=float(price)))
                 continue
             reserve = float(price * qty)
             auc = Auction(
@@ -120,10 +127,13 @@ def seed_demo_procurement() -> dict:
                 start_time=start, end_time=start + datetime.timedelta(hours=2),
                 reserve_price=reserve, min_decrement=float(step), min_bid_improvement=float(step),
                 current_best_bid=reserve, best_bidder_id=None, total_bids_placed=0,
-                freight_fixed=0.0, tax_rate_pct=GST, currency="INR", visibility="own_rank_only",
+                freight_fixed=0.0, tax_rate_pct=0.0, currency="INR", visibility="own_rank_only",
                 extensions_used=0, max_extensions=5,
             )
             db.add(auc)
+            db.flush()
+            db.add(AuctionLineItem(auction_id=auc.id, line_code=f"SC-{n - 1:02d}", description=desc,
+                                   quantity=float(qty), uom="MT", last_rate=float(price)))
             out["auctions_added"].append((auc.auction_number, "Forward", reserve))
         db.commit()
         return out

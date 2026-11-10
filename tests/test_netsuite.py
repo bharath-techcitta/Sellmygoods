@@ -165,3 +165,38 @@ def test_forward_auction_every_bid_must_beat_the_current_highest():
     h = {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(ids["SUP_F2"])}
     c = client.get(f"/api/v1/auctions/{a['id']}/live-console", headers=h).json()
     assert c["session"]["your_current_rank"] == 2 and c["auction"]["current_best_bid"] == 115000
+
+
+def test_forward_auction_with_item_lines_prices_per_line_highest_total_leads():
+    from backend.database import SessionLocal
+    from backend.models import Supplier
+    db = SessionLocal()
+    for code in ("SUP_L1", "SUP_L2"):
+        if not db.query(Supplier).filter(Supplier.code == code).first():
+            db.add(Supplier(code=code, legal_name=code, trading_name=code, status="Active"))
+    db.commit()
+    ids = {s.code: s.id for s in db.query(Supplier).all()}
+    db.close()
+    admin = {"X-Demo-Role": "procurement_buyer", "X-Demo-Portal": "admin"}
+    a = client.post("/api/v1/auctions", headers=admin, json={
+        "title": "Scrap with lines", "auction_type": "Forward Disposal", "status": "Live", "reserve_price": 1000000,
+        "min_decrement": 10000, "min_bid_improvement": 10000, "tax_rate_pct": 0, "freight_fixed": 0,
+        "lines": [{"line_code": "S1", "description": "HMS", "quantity": 10, "uom": "MT", "last_rate": 60000},
+                  {"line_code": "S2", "description": "Boring", "quantity": 10, "uom": "MT", "last_rate": 40000}]}).json()
+
+    def hdr(code):
+        return {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(ids[code])}
+
+    lines = client.get(f"/api/v1/auctions/{a['id']}/live-console", headers=hdr("SUP_L1")).json()["lines"]
+
+    def bid(code, r1, r2):
+        return client.post(f"/api/v1/auctions/{a['id']}/bid", headers=hdr(code), json={
+            "line_rates": [{"line_id": lines[0]["id"], "new_rate": r1}, {"line_id": lines[1]["id"], "new_rate": r2}]})
+
+    assert bid("SUP_L1", 60000, 40000).status_code == 400          # = starting price (10 x 60k + 10 x 40k)
+    assert bid("SUP_L1", 62000, 41000).status_code == 200          # total 1,030,000
+    low = bid("SUP_L2", 61000, 41000)                              # total 1,020,000 < highest + raise
+    assert low.status_code == 400 and "current highest bid" in low.json()["detail"]
+    assert bid("SUP_L2", 63000, 42000).status_code == 200          # total 1,050,000 leads
+    c = client.get(f"/api/v1/auctions/{a['id']}/live-console", headers=hdr("SUP_L1")).json()
+    assert c["session"]["your_current_rank"] == 2 and c["auction"]["current_best_bid"] == 1050000

@@ -91,6 +91,8 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
   const biddingAllowed = consoleData?.bidding_allowed !== false && auction?.status === 'Live';
   const freight = Number(commercial.freight_fixed ?? auction?.freight_fixed ?? 0) || 0;
   const taxRate = auction?.tax_rate_pct ?? 18;
+  // Forward disposal (scrap sale): same screen, opposite direction - the HIGHEST total leads.
+  const forward = auction?.auction_type === 'Forward Disposal';
 
   const { label: timerLabel } = useAuctionCountdown(auction?.end_time);
 
@@ -104,6 +106,12 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     return { material, freight, tax, total: material + freight + tax };
   }, [lines, rates, freight, taxRate]);
 
+  const minRaise = auction?.min_bid_improvement ?? 5000;
+  const topBid = Number(session.leader_total ?? auction?.current_best_bid ?? 0);
+  const hasBids = topBid > Number(auction?.reserve_price || 0) || (session.total_bidders || 0) > 0;
+  // forward: smallest total that takes the lead (highest bid + minimum raise; first bid > starting price)
+  const forwardMin = hasBids ? topBid + minRaise : Number(auction?.reserve_price || 0) + minRaise;
+
   const validation = useMemo(() => {
     const minImp = auction?.min_bid_improvement ?? 5000;
     const last = session.your_last_accepted_total;
@@ -111,6 +119,15 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     const badLine = lines.find((l) => !(Number(rates[l.id] ?? l.last_rate) > 0));
     if (badLine) {
       return { ok: false, message: `Enter a rate greater than 0 for ${badLine.line_code}.` };
+    }
+    if (forward) {
+      if (hasBids && breakdown.total < topBid + minImp) {
+        return { ok: false, message: `Total must be at least ${formatMoney(topBid + minImp, currency)} (current highest bid ${formatMoney(topBid, currency)} + minimum raise ${formatMoney(minImp, currency)}).` };
+      }
+      if (!hasBids && opening && breakdown.total <= opening) {
+        return { ok: false, message: `Opening bid must be higher than the starting price (${formatMoney(opening, currency)}).` };
+      }
+      return { ok: true, message: 'Valid — this bid would take rank 1.' };
     }
     if (last != null && breakdown.total > last - minImp) {
       return { ok: false, message: `Total must be at most ${formatMoney(last - minImp, currency)} (at least ${formatMoney(minImp, currency)} below your last bid of ${formatMoney(last, currency)}).` };
@@ -121,13 +138,13 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     const leader = session.leader_total;
     const wouldLead = leader == null || breakdown.total < leader;
     return { ok: true, message: wouldLead ? 'Valid — this bid would take rank 1.' : 'Valid — this bid improves your position.' };
-  }, [breakdown.total, rates, lines, session.your_last_accepted_total, session.leader_total, auction, currency]);
+  }, [breakdown.total, rates, lines, session.your_last_accepted_total, session.leader_total, auction, currency, forward, hasBids, topBid, session.total_bidders]);
 
   const handleRateChange = (lineId, value) => {
     setRates((prev) => ({ ...prev, [lineId]: value === '' ? '' : Number(value) }));
   };
 
-  // Scale every line rate down proportionally so the evaluated total lands on `target`.
+  // Scale every line rate proportionally so the evaluated total lands on `target` (down for reverse, up for forward).
   const applyTarget = (target) => {
     if (target == null || !lines.length) return;
     const base = lines.reduce((s, l) => s + Number(l.last_rate) * Number(l.quantity), 0);
@@ -136,7 +153,9 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
     const scale = neededMaterial / base;
     const next = {};
     lines.forEach((l) => {
-      next[l.id] = Math.floor(Number(l.last_rate) * scale * 100) / 100;
+      // reverse: round DOWN (stay at/under the target); forward: round UP (stay at/over the target)
+      const raw = Number(l.last_rate) * scale * 100;
+      next[l.id] = (forward ? Math.ceil(raw - 1e-9) : Math.floor(raw + 1e-9)) / 100;
     });
     setRates(next);
   };
@@ -207,7 +226,7 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
       <div className="card-enterprise" style={{ padding: '18px 22px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>Reverse procurement auction</h1>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{forward ? 'Forward disposal auction' : 'Reverse procurement auction'}</h1>
             <StatusBadge status={auction?.status || 'Live'} />
             <span style={{ fontSize: 11, fontWeight: 700, color: '#0f9d78', background: '#d1fae8', padding: '2px 8px', borderRadius: 4 }}>Online</span>
           </div>
@@ -254,14 +273,14 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
             <div style={{ fontSize: 12, color: '#0f9d78', fontWeight: 700, marginTop: 4 }}>You are leading 🏆</div>
           ) : session.your_current_rank ? (
             <div style={{ marginTop: 8, display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {session.bid_to_gain_one_rank != null && session.bid_to_gain_one_rank !== session.bid_to_take_lead && (
+              {!forward && session.bid_to_gain_one_rank != null && session.bid_to_gain_one_rank !== session.bid_to_take_lead && (
                 <button type="button" onClick={() => applyTarget(session.bid_to_gain_one_rank)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: '1px solid #432177', background: '#fff', color: '#432177', cursor: 'pointer' }}>
                   Climb 1 rank ≤ {formatMoney(session.bid_to_gain_one_rank, currency)}
                 </button>
               )}
               {session.bid_to_take_lead != null && (
                 <button type="button" onClick={() => applyTarget(session.bid_to_take_lead)} style={{ padding: '5px 10px', fontSize: 11, fontWeight: 700, borderRadius: 5, border: 'none', background: '#432177', color: '#fff', cursor: 'pointer' }}>
-                  Take rank 1 ≤ {formatMoney(session.bid_to_take_lead, currency)}
+                  Take rank 1 {forward ? '≥' : '≤'} {formatMoney(session.bid_to_take_lead, currency)}
                 </button>
               )}
             </div>
@@ -286,7 +305,7 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
                 <th style={{ padding: '10px 12px', textAlign: 'left' }}>Item / Grade</th>
                 <th style={{ padding: '10px 8px' }}>Qty</th>
                 <th style={{ padding: '10px 8px', textAlign: 'right' }}>Last rate</th>
-                <th style={{ padding: '10px 8px', textAlign: 'right' }}>New rate / MT</th>
+                <th style={{ padding: '10px 8px', textAlign: 'right' }}>{forward ? 'Your rate / MT' : 'New rate / MT'}</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right' }}>Amount</th>
               </tr>
             </thead>
@@ -340,24 +359,35 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
               <span style={{ color: '#73767b' }}>Material subtotal</span>
               <span className="font-mono-numbers">{formatMoney(breakdown.material, currency)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#73767b' }}>Fixed freight</span>
-              <span className="font-mono-numbers">{formatMoney(freight, currency)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#73767b' }}>Tax (illustrative)</span>
-              <span className="font-mono-numbers">{formatMoney(breakdown.tax, currency)}</span>
-            </div>
+            {(!forward || freight > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#73767b' }}>Fixed freight</span>
+                <span className="font-mono-numbers">{formatMoney(freight, currency)}</span>
+              </div>
+            )}
+            {(!forward || breakdown.tax > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#73767b' }}>Tax (illustrative)</span>
+                <span className="font-mono-numbers">{formatMoney(breakdown.tax, currency)}</span>
+              </div>
+            )}
             <div style={{ borderTop: '2px solid #e6e6e9', marginTop: 8, paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700 }}>EVALUATED TOTAL</span>
+              <span style={{ fontWeight: 700 }}>{forward ? 'YOUR BID TOTAL' : 'EVALUATED TOTAL'}</span>
               <span style={{ fontSize: 22, fontWeight: 800, color: '#432177' }} className="font-mono-numbers">
                 {formatMoney(breakdown.total, currency)}
               </span>
             </div>
           </div>
           <p style={{ fontSize: 12, color: '#73767b', margin: '14px 0 8px' }}>
-            Minimum own-bid improvement: {formatMoney(auction?.min_bid_improvement ?? 5000, currency)}
+            {forward
+              ? `Every bid must be higher than the current highest bid by at least ${formatMoney(minRaise, currency)}. Minimum winning bid: ${formatMoney(forwardMin, currency)}.`
+              : `Minimum own-bid improvement: ${formatMoney(auction?.min_bid_improvement ?? 5000, currency)}`}
           </p>
+          {forward && biddingAllowed && (
+            <button type="button" onClick={() => applyTarget(forwardMin)} style={{ width: '100%', marginBottom: 10, padding: '8px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6, border: '1px solid #432177', background: '#fff', color: '#432177', cursor: 'pointer' }}>
+              Fill the minimum winning bid ≥ {formatMoney(forwardMin, currency)}
+            </button>
+          )}
           <div
             style={{
               padding: '10px 12px',
@@ -399,9 +429,9 @@ export default function LiveReverseAuctionConsole({ auctionId, onBack }) {
       <div className="card-enterprise" style={{ padding: 18, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700 }}>Commercial conditions</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, fontSize: 13 }}>
-          <div><span style={{ color: '#73767b' }}>Freight:</span> {formatMoney(freight, currency)} fixed</div>
+          {!forward && <div><span style={{ color: '#73767b' }}>Freight:</span> {formatMoney(freight, currency)} fixed</div>}
           <div><span style={{ color: '#73767b' }}>Delivery:</span> {commercial.delivery_terms}</div>
-          <div><span style={{ color: '#73767b' }}>Tax:</span> {commercial.tax_note}</div>
+          {!forward && <div><span style={{ color: '#73767b' }}>Tax:</span> {commercial.tax_note}</div>}
           <div><span style={{ color: '#73767b' }}>Payment:</span> {commercial.payment_terms}</div>
         </div>
         <div style={{ marginTop: 10, fontSize: 12, color: '#0f9d78', fontWeight: 600 }}>
