@@ -102,6 +102,8 @@ export const api = {
   getTasks: () => request('/dashboard/tasks'),
   getActivity: () => request('/dashboard/recent-activity'),
   getNotifications: () => request('/notifications'),
+  markNotificationRead: (id) => request(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllNotificationsRead: () => request('/notifications/read-all', { method: 'POST' }),
 
   // Suppliers
   getSuppliers: (status = '', search = '') => 

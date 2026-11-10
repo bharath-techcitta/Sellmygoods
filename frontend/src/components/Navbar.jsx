@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
 
 const defaultAdminNotifications = [
@@ -28,6 +28,7 @@ export default function Navbar({
   onSwitchRole,
   toggleSidebar,
   onNavigate,
+  onOpenAuction,
 }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -35,6 +36,8 @@ export default function Navbar({
     currentRole === 'supplier_user' ? defaultBuyerNotifications : defaultAdminNotifications
   );
   const [unreadCount, setUnreadCount] = useState(notifications.length);
+  const [toast, setToast] = useState(null);      // pop-up when a buyer starts an auction
+  const seenIds = useRef(null);                  // ids already shown (null until the first load)
 
   // Logins come from the backend: the procurement buyer + one login per ACTIVE supplier.
   const [roles, setRoles] = useState([
@@ -55,6 +58,14 @@ export default function Navbar({
     try {
       const res = await api.getNotifications();
       if (res?.items?.length) {
+        const stored = res.items.filter((i) => i.db_id);
+        if (seenIds.current === null) {
+          seenIds.current = new Set(stored.map((i) => i.id));
+        } else {
+          const fresh = stored.find((i) => i.unread && !seenIds.current.has(i.id));
+          stored.forEach((i) => seenIds.current.add(i.id));
+          if (fresh) setToast(fresh);
+        }
         setNotifications(res.items);
         setUnreadCount(res.unread_count ?? res.items.length);
       } else if (res?.items) {
@@ -67,19 +78,40 @@ export default function Navbar({
       setNotifications(fallback);
       setUnreadCount(fallback.length);
     }
-  }, [currentRole]);
+  }, [currentRole, currentSupplierId]);
+
+  useEffect(() => {
+    seenIds.current = null;
+    setToast(null);
+  }, [currentRole, currentSupplierId]);
 
   useEffect(() => {
     loadNotifications();
-    const timer = setInterval(loadNotifications, 60000);
+    const timer = setInterval(loadNotifications, 10000);
     return () => clearInterval(timer);
-  }, [loadNotifications, currentRole, activePortal]);
+  }, [loadNotifications, currentRole, currentSupplierId, activePortal]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(null), 9000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const handleNotificationClick = (item) => {
     setShowNotifications(false);
-    if (item.route && onNavigate) {
+    setToast(null);
+    if (item.db_id) {
+      api.markNotificationRead(item.db_id).then(loadNotifications).catch(() => {});
+    }
+    if (item.auction_id && onOpenAuction) {
+      onOpenAuction(item.auction_id);
+    } else if (item.route && onNavigate) {
       onNavigate(item.route);
     }
+  };
+
+  const markAllRead = () => {
+    api.markAllNotificationsRead().then(loadNotifications).catch(() => {});
   };
 
   return (
@@ -245,7 +277,12 @@ export default function Navbar({
                 }}
               >
                 <span style={{ fontSize: '13px', fontWeight: '700', color: '#242424' }}>Notifications</span>
-                <span style={{ fontSize: '11px', color: '#73767b' }}>
+                <span style={{ fontSize: '11px', color: '#73767b', display: 'flex', gap: 10, alignItems: 'center' }}>
+                  {currentRole === 'supplier_user' && notifications.some((n) => n.unread) && (
+                    <button type="button" onClick={markAllRead} style={{ border: 'none', background: 'none', color: '#432177', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                      Mark all read
+                    </button>
+                  )}
                   {currentRole === 'supplier_user' ? 'Supplier workspace' : 'Procurement workspace'}
                 </span>
               </div>
@@ -265,14 +302,15 @@ export default function Navbar({
                       padding: '12px 16px',
                       border: 'none',
                       borderBottom: '1px solid #f1f1f4',
-                      background: '#fff',
+                      background: n.unread ? '#f5f0ff' : '#fff',
+                      borderLeft: n.unread ? '3px solid #432177' : '3px solid transparent',
                       cursor: 'pointer',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#faf5ff';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#fff';
+                      e.currentTarget.style.backgroundColor = n.unread ? '#f5f0ff' : '#fff';
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
@@ -386,6 +424,31 @@ export default function Navbar({
           )}
         </div>
       </div>
+      {toast && (
+        <div
+          role="alert"
+          onClick={() => handleNotificationClick(toast)}
+          style={{
+            position: 'fixed', top: 70, right: 24, width: 340, zIndex: 80, cursor: 'pointer',
+            background: '#2e1857', color: '#fff', borderRadius: 10, padding: '14px 16px',
+            boxShadow: '0 12px 30px rgba(46,24,87,0.35)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <strong style={{ fontSize: 13 }}>🔔 {toast.title}</strong>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={(e) => { e.stopPropagation(); setToast(null); }}
+              style={{ background: 'none', border: 'none', color: '#d8c8ff', fontSize: 16, cursor: 'pointer' }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={{ fontSize: 12, lineHeight: 1.4, color: '#e9defc' }}>{toast.message}</div>
+          <div style={{ fontSize: 11, marginTop: 8, fontWeight: 700, color: '#ffd9a8' }}>Click to open the auction →</div>
+        </div>
+      )}
     </header>
   );
 }

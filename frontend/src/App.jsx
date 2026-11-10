@@ -116,6 +116,10 @@ export default function App() {
           currentSupplierId={currentSupplierId}
           onSwitchRole={handleSwitchRole}
           onNavigate={navigateTo}
+          onOpenAuction={(id) => {
+            setSelectedAuctionId(id);
+            navigateTo('buyer-auction-console');
+          }}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
 

@@ -15,7 +15,7 @@ from .models import (
     User, Category, Item, Supplier, SupplierContact, SupplierBank, SupplierDoc,
     Requisition, RequisitionLine, SourcingEvent, BidResponse, BidLine,
     PurchaseOrder, POLine, GoodsReceipt, Invoice, Contract, Clause,
-    Auction, AuctionLineItem, AuctionBidReceipt, Budget, ApprovalWorkflow, ApprovalTask
+    Auction, AuctionLineItem, AuctionBidReceipt, Budget, ApprovalWorkflow, ApprovalTask, Notification
 )
 from .calculations import calculate_quote_line, calculate_budget_balance, calculate_composite_score
 
@@ -364,6 +364,66 @@ def _task_route(module: str) -> str:
     return routes.get(module, "dashboard")
 
 
+def _ago(ts) -> str:
+    if not ts:
+        return ""
+    secs = max(0, int((datetime.datetime.utcnow() - ts).total_seconds()))
+    if secs < 60:
+        return "Just now"
+    if secs < 3600:
+        return f"{secs // 60} min ago"
+    if secs < 86400:
+        return f"{secs // 3600} h ago"
+    return f"{secs // 86400} d ago"
+
+
+def _notify_suppliers_auction_live(db: Session, auc: Auction) -> int:
+    """Bell notification for every ACTIVE supplier when a buyer starts (goes live with) an auction.
+    De-duplicated: a supplier is not notified twice about the same auction within 10 minutes."""
+    now = datetime.datetime.utcnow()
+    recent = {
+        row[0] for row in db.query(Notification.supplier_id).filter(
+            Notification.auction_id == auc.id, Notification.kind == "auction_live",
+            Notification.created_at >= now - datetime.timedelta(minutes=10))
+    }
+    kind = "reverse" if auc.auction_type == "Reverse Sourcing" else "forward"
+    closes = ""
+    if auc.end_time:
+        ist = auc.end_time + datetime.timedelta(hours=5, minutes=30)
+        closes = f" Closes {ist.strftime('%d %b, %I:%M %p')} IST."
+    sent = 0
+    for sup in db.query(Supplier).filter(Supplier.status == "Active").all():
+        if sup.id in recent:
+            continue
+        db.add(Notification(
+            supplier_id=sup.id, kind="auction_live", auction_id=auc.id, priority="Urgent", module="Auction",
+            title=f"Auction is LIVE: {auc.auction_number}",
+            message=f"{auc.title} - {kind} auction is now open for bidding.{closes}",
+            route="buyer-auction-console",
+        ))
+        sent += 1
+    return sent
+
+
+@app.post("/api/v1/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, db: Session = Depends(get_db)):
+    sup_id = get_demo_session().get("supplier_id") or 1
+    n = db.query(Notification).filter(Notification.id == notification_id, Notification.supplier_id == sup_id).first()
+    if not n:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    n.is_read = True
+    db.commit()
+    return {"status": "ok"}
+
+
+@app.post("/api/v1/notifications/read-all")
+def mark_all_notifications_read(db: Session = Depends(get_db)):
+    sup_id = get_demo_session().get("supplier_id") or 1
+    db.query(Notification).filter(Notification.supplier_id == sup_id, Notification.is_read == False).update({"is_read": True})  # noqa: E712
+    db.commit()
+    return {"status": "ok"}
+
+
 @app.get("/api/v1/notifications")
 def get_notifications(db: Session = Depends(get_db)):
     """Role-aware notification feed for the header bell."""
@@ -372,7 +432,18 @@ def get_notifications(db: Session = Depends(get_db)):
     sup_id = session.get("supplier_id") or 1
     items: List[dict] = []
 
+    unread_db = 0
     if role == "supplier_user":
+        own = (db.query(Notification).filter(Notification.supplier_id == sup_id)
+               .order_by(Notification.created_at.desc(), Notification.id.desc()).limit(10).all())
+        for n in own:
+            if not n.is_read:
+                unread_db += 1
+            items.append({
+                "id": f"n-{n.id}", "db_id": n.id, "auction_id": n.auction_id, "unread": not n.is_read,
+                "title": n.title, "message": n.message, "time": _ago(n.created_at),
+                "priority": n.priority or "Urgent", "route": n.route, "module": n.module,
+            })
         events = db.query(SourcingEvent).order_by(SourcingEvent.id.desc()).all()
         for ev in events:
             resp = db.query(BidResponse).filter(
@@ -503,7 +574,9 @@ def get_notifications(db: Session = Depends(get_db)):
     priority_order = {"Urgent": 0, "High": 1, "Medium": 2, "Low": 3}
     items.sort(key=lambda x: priority_order.get(x.get("priority", "Medium"), 2))
 
-    return {"unread_count": len(items), "items": items[:12]}
+    static_count = len([i for i in items if not i.get("db_id")])
+    # stored notifications stay visible (read or not); badge = standing alerts + unread stored ones
+    return {"unread_count": static_count + unread_db, "items": items[:14]}
 
 
 @app.get("/api/v1/dashboard/recent-activity")
@@ -1924,6 +1997,8 @@ def create_auction(req: CreateAuctionRequest, db: Session = Depends(get_db)):
     for ln in line_items:
         ln.auction_id = auc.id
         db.add(ln)
+    if status == "Live":
+        _notify_suppliers_auction_live(db, auc)
     db.commit()
     db.refresh(auc)
     return _serialize_auction(auc)
@@ -1940,9 +2015,11 @@ def update_auction(id: int, req: UpdateAuctionRequest, db: Session = Depends(get
     if not auc:
         raise HTTPException(status_code=404, detail="Auction not found")
     now = datetime.datetime.utcnow()
+    went_live = False
     if req.status:
         if req.status not in ("Scheduled", "Live", "Closed", "Award Under Process"):
             raise HTTPException(status_code=400, detail="Invalid status")
+        went_live = req.status == "Live" and auc.status != "Live"
         auc.status = req.status
         if req.status == "Live":
             if not auc.start_time or auc.start_time > now:
@@ -1951,6 +2028,8 @@ def update_auction(id: int, req: UpdateAuctionRequest, db: Session = Depends(get
             auc.end_time = now + datetime.timedelta(hours=max(0.5, hours))
     elif req.duration_hours and auc.status == "Live":
         auc.end_time = now + datetime.timedelta(hours=max(0.5, float(req.duration_hours)))
+    if went_live:
+        _notify_suppliers_auction_live(db, auc)
     db.commit()
     db.refresh(auc)
     return _serialize_auction(auc)

@@ -95,3 +95,41 @@ def test_oauth_signature_is_deterministic(monkeypatch):
     h2 = ns.build_auth_header("POST", "https://h/x", {"limit": "1"}, nonce="n", timestamp="1")
     assert h1 == h2 and 'realm="1234567_SB1"' in h1 and "oauth_signature=" in h1
     assert "SECRET" not in h1 and "xRET" not in h1.split("oauth_signature")[0]
+
+
+def test_supplier_bell_notified_when_buyer_starts_auction():
+    from backend.database import SessionLocal
+    from backend.models import Supplier
+    db = SessionLocal()
+    for code, name in (("SUP_T1", "Test Sup One"), ("SUP_T2", "Test Sup Two")):
+        if not db.query(Supplier).filter(Supplier.code == code).first():
+            db.add(Supplier(code=code, legal_name=name, trading_name=name, status="Active"))
+    db.add(Supplier(code="SUP_T3", legal_name="Pending Co", trading_name="Pending Co", status="Pending Approval"))
+    db.commit()
+    ids = {s.code: s.id for s in db.query(Supplier).all()}
+    db.close()
+    buyer = {"X-Demo-Role": "procurement_buyer", "X-Demo-Portal": "admin"}
+    a = client.post("/api/v1/auctions", headers=buyer, json={
+        "title": "Notify me", "auction_type": "Reverse Sourcing", "status": "Scheduled", "reserve_price": 100000,
+        "min_decrement": 1000, "tax_rate_pct": 0, "freight_fixed": 0,
+        "lines": [{"line_code": "A", "description": "x", "quantity": 1, "uom": "MT", "last_rate": 90000}]}).json()
+
+    def bell(sid):
+        h = {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(sid)}
+        d = client.get("/api/v1/notifications", headers=h).json()
+        return d, [i for i in d["items"] if i.get("db_id")]
+
+    d0, s0 = bell(ids["SUP_T1"])
+    assert s0 == []                                   # nothing while only Scheduled
+    assert client.patch(f"/api/v1/auctions/{a['id']}", headers=buyer, json={"status": "Live"}).status_code == 200
+    d1, s1 = bell(ids["SUP_T1"])
+    assert len(s1) == 1 and s1[0]["unread"] and s1[0]["auction_id"] == a["id"] and "LIVE" in s1[0]["title"]
+    assert d1["unread_count"] > d0["unread_count"]          # badge goes up
+    assert len(bell(ids["SUP_T2"])[1]) == 1           # every ACTIVE supplier is told
+    assert bell(ids["SUP_T3"])[1] == []               # a non-active supplier is not
+    client.patch(f"/api/v1/auctions/{a['id']}", headers=buyer, json={"status": "Live"})  # already live -> no duplicate
+    assert len(bell(ids["SUP_T1"])[1]) == 1
+    h = {"X-Demo-Role": "supplier_user", "X-Demo-Portal": "buyer", "X-Demo-Supplier-Id": str(ids["SUP_T1"])}
+    assert client.post(f"/api/v1/notifications/{s1[0]['db_id']}/read", headers=h).status_code == 200
+    d2, s2 = bell(ids["SUP_T1"])
+    assert s2[0]["unread"] is False and d2["unread_count"] == d1["unread_count"] - 1

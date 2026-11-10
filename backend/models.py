@@ -398,3 +398,19 @@ class ApprovalTask(Base):
     due_date = Column(String)
     status = Column(String, default="Pending") # Pending, Approved, Rejected, Clarification Requested
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class Notification(Base):
+    """Per-user bell notifications (currently: a supplier is told when a buyer starts an auction)."""
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, index=True)
+    supplier_id = Column(Integer, index=True)           # recipient supplier
+    kind = Column(String, default="auction_live")
+    auction_id = Column(Integer, nullable=True, index=True)
+    title = Column(String)
+    message = Column(String)
+    priority = Column(String, default="Urgent")
+    module = Column(String, default="Auction")
+    route = Column(String, default="buyer-auctions")
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
