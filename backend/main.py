@@ -2052,7 +2052,9 @@ class PlaceAuctionBidRequest(BaseModel):
 
 @app.post("/api/v1/auctions/{id}/bid")
 def place_auction_bid(id: int, req: PlaceAuctionBidRequest, db: Session = Depends(get_db)):
-    auc = db.query(Auction).filter(Auction.id == id).first()
+    # Lock the auction row for the whole bid: simultaneous bids are validated one at a time against the
+    # up-to-date highest/lowest bid, so two buyers can never both slip in under the same old leader.
+    auc = db.query(Auction).filter(Auction.id == id).with_for_update().first()
     if not auc:
         raise HTTPException(status_code=404, detail="Auction not found")
     _close_if_expired(db, auc)
