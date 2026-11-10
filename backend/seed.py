@@ -460,7 +460,7 @@ def ensure_auction_dummy_data(db) -> None:
 
 
 def ensure_live_auctions_ready(db) -> None:
-    """Keep Live auctions bid-ready: future end times, line items, session receipts."""
+    """Keep Live reverse auctions bid-ready by filling in missing line items (timing/status are never changed)."""
     now = datetime.datetime.utcnow()
     live = db.query(Auction).filter(Auction.status == "Live").all()
     default_lines = {
@@ -477,11 +477,10 @@ def ensure_live_auctions_ready(db) -> None:
             ("CLD-02", "Houston–Atlanta chilled pallet load", 12.0, "Trip", 6400.0),
         ],
     }
+    # NOTE: never touch start/end times or status here. Auction timing is owned by the database:
+    # a Live auction ends when its end_time passes (see _close_if_expired) and must not be "revived"
+    # by a restart/deploy - otherwise local and deployed environments show different Live auctions.
     for auc in live:
-        if not auc.end_time or auc.end_time <= now:
-            auc.end_time = now + datetime.timedelta(hours=2)
-        if not auc.start_time or auc.start_time > now:
-            auc.start_time = now - datetime.timedelta(minutes=45)
         if auc.auction_type == "Reverse Sourcing":
             line_count = db.query(AuctionLineItem).filter(AuctionLineItem.auction_id == auc.id).count()
             if line_count == 0:
