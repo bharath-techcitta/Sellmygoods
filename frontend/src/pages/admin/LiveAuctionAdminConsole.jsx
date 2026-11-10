@@ -103,6 +103,7 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
   if (!data) return <div style={{ padding: 24 }}>Loading live auction console…</div>;
 
   const m = data.metrics || {};
+  const fwd = data.auction?.auction_type === 'Forward Disposal';   // scrap/disposal: admin SELLS, bidders BUY
   const cur = m.currency || 'INR';
   const fmt = cur === 'INR' ? formatInr : (n) => `$${n?.toLocaleString()}`;
 
@@ -141,12 +142,18 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
         </div>
       </div>
 
+      {fwd && (
+        <div style={{ padding: '10px 16px', background: '#fff7e6', border: '1px solid #f3d9a4', color: '#8a5a00', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
+          <strong>Disposal (scrap sale):</strong> you are the <strong>seller</strong> ({m.seller || 'Procurio Corp US (Admin)'}). Bidders are <strong>buyers</strong> — each new bid must be higher, and the highest bid leads.
+        </div>
+      )}
+
       {/* Metrics row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { label: 'Current best evaluated', value: fmt(m.current_best_evaluated), sub: m.current_best_supplier },
-          { label: 'Provisional savings', value: `${m.provisional_savings_pct}%`, sub: `${fmt(m.provisional_savings_amount)} vs ${fmt(m.baseline_total)} baseline`, valueColor: '#0f9d78' },
-          { label: 'Participation', value: `${m.participation_bidding} bidding`, sub: `${m.participation_invited} invited / ${m.participation_admitted} admitted` },
+          { label: fwd ? 'Highest bid' : 'Current best evaluated', value: fmt(m.current_best_evaluated), sub: fwd ? `Buyer: ${m.current_best_supplier}` : m.current_best_supplier },
+          { label: fwd ? 'Above reserve' : 'Provisional savings', value: `${m.provisional_savings_pct}%`, sub: fwd ? `${fmt(m.provisional_savings_amount)} above ${fmt(m.baseline_total)} reserve` : `${fmt(m.provisional_savings_amount)} vs ${fmt(m.baseline_total)} baseline`, valueColor: '#0f9d78' },
+          { label: 'Participation', value: fwd ? `${m.participation_bidding} buyers bidding` : `${m.participation_bidding} bidding`, sub: fwd ? `${m.participation_invited} buyers invited / ${m.participation_admitted} admitted` : `${m.participation_invited} invited / ${m.participation_admitted} admitted` },
           { label: 'Accepted bids', value: String(m.accepted_bids_count), sub: `Last accepted ${m.last_accepted_at}` },
           { label: 'Live health', value: m.live_health, sub: `Sequence ${m.sequence} · Updated just now`, valueColor: '#0f9d78' },
         ].map((card) => (
@@ -194,8 +201,8 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
         <div className="card-enterprise" style={{ overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px', borderBottom: '1px solid #e6e6e9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Supplier leaderboard</h3>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#73767b' }}>Evaluated lot totals + latest eligible complete bid per supplier</p>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{fwd ? 'Buyer leaderboard' : 'Supplier leaderboard'}</h3>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#73767b' }}>{fwd ? 'Highest bid per buyer ranks first' : 'Evaluated lot totals + latest eligible complete bid per supplier'}</p>
             </div>
             <button type="button" style={{ padding: '6px 12px', border: '1px solid #e6e6e9', borderRadius: 6, background: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Compare</button>
           </div>
@@ -203,8 +210,8 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
             <thead style={{ background: '#fcfcfd', color: '#73767b' }}>
               <tr>
                 <th style={{ padding: '10px 14px', textAlign: 'left' }}>Rank</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left' }}>Supplier / ERP code</th>
-                <th style={{ padding: '10px 14px', textAlign: 'right' }}>Evaluated {cur}</th>
+                <th style={{ padding: '10px 14px', textAlign: 'left' }}>{fwd ? 'Buyer / code' : 'Supplier / ERP code'}</th>
+                <th style={{ padding: '10px 14px', textAlign: 'right' }}>{fwd ? `Bid ${cur}` : `Evaluated ${cur}`}</th>
                 <th style={{ padding: '10px 14px', textAlign: 'right' }}>Gap to best</th>
                 <th style={{ padding: '10px 14px' }}>Bids</th>
                 <th style={{ padding: '10px 14px' }}>Last bid</th>
@@ -215,7 +222,7 @@ export default function LiveAuctionAdminConsole({ auctionId, onBack }) {
               {(data.leaderboard || []).length === 0 && (
                 <tr>
                   <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#73767b' }}>
-                    No supplier bids yet — activity will appear here when Elena (or other suppliers) submit.
+                    {fwd ? 'No buyer bids yet — bids will appear here as buyers raise their offers.' : 'No supplier bids yet — activity will appear here when suppliers submit.'}
                   </td>
                 </tr>
               )}

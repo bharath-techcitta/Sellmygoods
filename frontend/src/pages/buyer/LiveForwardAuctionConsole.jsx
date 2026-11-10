@@ -132,6 +132,9 @@ export default function LiveForwardAuctionConsole({ auctionId, onBack }) {
             <StatusBadge status={auction.status} />
           </div>
           <p style={{ margin: '6px 0 0', color: '#73767b', fontSize: 13 }}>{auction.auction_number} · {auction.title}</p>
+          <p style={{ margin: '6px 0 0', fontSize: 12, fontWeight: 600, color: '#b65c16' }}>
+            You are bidding as a BUYER. The seller is Procurio Corp US — the highest bid takes rank 1.
+          </p>
           <p style={{ margin: '4px 0 0', color: '#73767b', fontSize: 12 }}>Closes {formatIst(auction.end_time)} IST · Extension {auction.extensions_used} of {auction.max_extensions}</p>
         </div>
         <div style={{ textAlign: 'right' }}>
